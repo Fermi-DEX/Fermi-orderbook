@@ -165,13 +165,13 @@ describe('fermi-dex', () => {
   console.log('basics done')
 
   before(async () => {
-    /*
+    
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         authority_second.publicKey,
         1 * anchor.web3.LAMPORTS_PER_SOL,
       ),
-    ); */
+    ); 
 
     await createMint(provider, coinMint, 9);
     await createMint(provider, pcMint, 6);

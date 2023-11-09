@@ -18,7 +18,7 @@ import {
     pcVault,
     reqQPda,
     programId,
-  } from "./utils/consts54";
+  } from "./utils/consts_nov9_2";
 
   import {createAssociatedTokenAccount, mintTo} from "./utils/utils"
 
@@ -109,7 +109,7 @@ describe('create ATA and airdrop', async () => {
 
  // comment out if ATA is already created.
  
- /*
+ 
     await createAssociatedTokenAccount(
       provider,
       new anchor.web3.PublicKey(coinMint),
@@ -137,7 +137,7 @@ describe('create ATA and airdrop', async () => {
       authority2PcTokenAccount,
       authority2,
     );
-  */
+  
     console.log("create ATA done")
 
     await mintTo(
