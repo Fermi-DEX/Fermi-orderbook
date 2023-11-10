@@ -11,39 +11,37 @@ use resp;
 
 
 use crate::utils2::*;
-use crate::errors::*;
+use crate::errors::ErrorCode;
 
 
 #[account]
 #[derive(Default)]
 pub struct Market {
-    coin_vault: Pubkey,
-    pc_vault: Pubkey,
+    pub coin_vault: Pubkey,
+    pub pc_vault: Pubkey,
 
-    coin_mint: Pubkey,
-    pc_mint: Pubkey,
+    pub coin_mint: Pubkey,
+    pub pc_mint: Pubkey,
 
-    coin_lot_size: u64,
-    pc_lot_size: u64,
+    pub coin_lot_size: u64,
+    pub pc_lot_size: u64,
 
-    coin_deposits_total: u64,
-    pc_deposits_total: u64,
+    pub coin_deposits_total: u64,
+    pub pc_deposits_total: u64,
 
-    bids: Pubkey,
-    asks: Pubkey,
+    pub bids: Pubkey,
+    pub asks: Pubkey,
 
-    req_q: Pubkey,
-    event_q: Pubkey,
+    pub req_q: Pubkey,
+    pub event_q: Pubkey,
 
-    authority: Pubkey,
+    pub authority: Pubkey,
 }
-
-
 
 #[bitflags]
 #[repr(u8)]
 #[derive(Copy, Clone, AnchorSerialize, AnchorDeserialize)]
-enum RequestFlag {
+pub enum RequestFlag {
     NewOrder = 0x01,
     CancelOrder = 0x02,
     Bid = 0x04,
@@ -52,40 +50,21 @@ enum RequestFlag {
     DecrementTakeOnSelfTrade = 0x20,
 }
 
-pub enum RequestView {
-    NewOrder {
-        side: Side,
-        order_type: OrderType,
-        order_id: u128,
-        max_coin_qty: u64,
-        native_pc_qty_locked: Option<u64>,
-        owner_slot: u8,
-        owner: Pubkey,
-    },
-    CancelOrder {
-        side: Side,
-        order_id: u128,
-        cancel_id: u64,
-        expected_owner_slot: u8,
-        expected_owner: Pubkey,
-    },
-
-}
 
 #[derive(Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct JitStruct {
-        side: Side,
-        maker: bool,
-        native_qty_paid: u64,
-        native_qty_received: u64,
-        order_id: u128,
-        owner: Pubkey,
-        owner_slot: u8,
-    }
-// #[repr(packed)]
+    pub side: Side,
+    pub maker: bool,
+    pub native_qty_paid: u64,
+    pub native_qty_received: u64,
+    pub order_id: u128,
+    pub owner: Pubkey,
+    pub owner_slot: u8,
+}
+
 #[derive(Copy, Clone, Default, AnchorSerialize, AnchorDeserialize)]
 pub struct RequestQueueHeader {
-    next_seq_num: u64,
+    pub next_seq_num: u64,
 }
 
 impl RequestQueueHeader {
@@ -95,13 +74,13 @@ impl RequestQueueHeader {
 #[account]
 #[derive(Default)]
 pub struct RequestQueue {
-    header: RequestQueueHeader,
+    pub header: RequestQueueHeader,
 }
 
 impl RequestQueue {
     pub const MAX_SIZE: usize = RequestQueueHeader::MAX_SIZE;
 
-    fn gen_order_id(&mut self, limit_price: u64, side: Side) -> u128 {
+    pub fn gen_order_id(&mut self, limit_price: u64, side: Side) -> u128 {
         let seq_num = self.gen_seq_num();
         let upper = (limit_price as u128) << 64;
         let lower = match side {
@@ -111,12 +90,13 @@ impl RequestQueue {
         upper | (lower as u128)
     }
 
-    fn gen_seq_num(&mut self) -> u64 {
+    pub fn gen_seq_num(&mut self) -> u64 {
         let seq_num = self.header.next_seq_num;
         self.header.next_seq_num += 1;
         seq_num
     }
 }
+
 
 #[bitflags]
 #[repr(u8)]
@@ -170,68 +150,141 @@ pub enum EventView {
 
 
 
+pub struct EventQueueIterator<'a> {
+    pub queue: &'a EventQueue,
+    pub index: u64,
+}
+
+#[derive(Copy, Clone, Default, AnchorSerialize, AnchorDeserialize)]
+pub struct Order {
+    pub order_id: u128,
+    pub qty: u64,
+    pub owner: Pubkey,
+    pub owner_slot: u8,
+}
+
 #[repr(packed)]
-//#[derive(Copy, Clone, Default, AnchorSerialize, AnchorDeserialize)]
+#[zero_copy]
+pub struct EventQueueHeader {
+    pub head: u64,
+    pub count: u64,
+    pub seq_num: u64,
+}
+
+#[account(zero_copy)]
+#[repr(packed)]
+pub struct EventQueue {
+    pub header: EventQueueHeader,
+    pub head: u64,
+    pub buf: [Event; 100], // Used zero_copy to expand eventsQ size
+}
+
+#[account]
+#[derive(Default)]
+pub struct Orders<const T: bool> {
+    pub sorted: Vec<Order>,
+}
+
+pub type Bids = Orders<true>;
+pub type Asks = Orders<false>;
+
+pub struct RequestProceeds {
+    pub coin_unlocked: u64,
+    pub native_pc_unlocked: u64,
+
+    pub coin_credit: u64,
+    pub native_pc_credit: u64,
+
+    pub coin_debit: u64,
+    pub native_pc_debit: u64,
+    pub jit_data: Vec<JitStruct>,
+}
+
+pub enum RequestView {
+    NewOrder {
+        side: Side,
+        order_type: OrderType,
+        order_id: u128,
+        max_coin_qty: u64,
+        native_pc_qty_locked: Option<u64>,
+        owner_slot: u8,
+        owner: Pubkey,
+    },
+    CancelOrder {
+        side: Side,
+        order_id: u128,
+        cancel_id: u64,
+        expected_owner_slot: u8,
+        expected_owner: Pubkey,
+    },
+
+}
+
+pub struct OrderBook<'a> {
+    pub bids: &'a mut Bids,
+    pub asks: &'a mut Asks,
+    pub market: &'a Market,
+}
+
+pub struct NewOrderParams {
+    pub side: Side,
+    pub order_type: OrderType,
+    pub order_id: u128,
+    pub max_coin_qty: u64,
+    pub native_pc_qty_locked: Option<u64>,
+    pub owner: Pubkey,
+    pub owner_slot: u8,
+}
+
+pub struct OrderRemaining {
+    pub coin_qty_remaining: u64,
+    pub native_pc_qty_remaining: Option<u64>,
+}
+
+
+#[repr(packed)]
 #[zero_copy]
 pub struct Event {
-    event_flags: u8,
-    owner_slot: u8,
+    pub event_flags: u8,
+    pub owner_slot: u8,
 
-    native_qty_released: u64,
-    native_qty_paid: u64,
+    pub native_qty_released: u64,
+    pub native_qty_paid: u64,
 
-    order_id: u128,
-    owner: Pubkey,
-    finalised: u8,
-    order_id_second: u128,
-    //cpty: Pubkey,
+    pub order_id: u128,
+    pub owner: Pubkey,
+    pub finalised: u8,
+    pub order_id_second: u128,
+    // pub cpty: Pubkey, // Uncomment this if you want it to be public
 }
 
 
-
-
-
-#[repr(packed)]
-#[zero_copy]
-//#[derive(Copy, Clone, Default, AnchorSerialize, AnchorDeserialize)]
-pub struct EventQueueHeader {
-    head: u64,
-    count: u64,
-    seq_num: u64,
-}
+// User owner value to track cpty
 
 impl EventQueueHeader {
     pub const MAX_SIZE: usize = 8 + 8 + 8;
 
-    fn head(&self) -> u64 {
+    pub fn head(&self) -> u64 {
         self.head
     }
-    fn set_head(&mut self, value: u64) {
+    pub fn set_head(&mut self, value: u64) {
         self.head = value;
     }
-    fn count(&self) -> u64 {
+    pub fn count(&self) -> u64 {
         self.count
     }
-    fn set_count(&mut self, value: u64) {
+    pub fn set_count(&mut self, value: u64) {
         self.count = value;
     }
-    fn incr_event_id(&mut self) {
+    pub fn incr_event_id(&mut self) {
         self.seq_num += 1;
     }
-    fn decr_event_id(&mut self, n: u64) {
+    pub fn decr_event_id(&mut self, n: u64) {
         self.seq_num -= n;
     }
 }
 
-//#[account]
-//#[derive(Default)]
-#[account(zero_copy)]
-#[repr(packed)]
-pub struct EventQueue {
-    header: EventQueueHeader,
-    head: u64,
-    buf: [Event; 100], // Used zero_copy to expand eventsQ size
-}
+
 
 
 impl EventQueue {
@@ -310,21 +363,6 @@ impl EventQueue {
 
 
 
-struct EventQueueIterator<'a> {
-    queue: &'a EventQueue,
-    index: u64,
-}
-
-
-
-// User owner value to track cpty
-#[derive(Copy, Clone, Default, AnchorSerialize, AnchorDeserialize)]
-pub struct Order {
-    order_id: u128,
-    qty: u64,
-    owner: Pubkey,
-    owner_slot: u8,
-}
 
 impl Order {
     pub const MAX_SIZE: usize = 16;
@@ -338,11 +376,6 @@ impl Order {
     }
 }
 
-#[account]
-#[derive(Default)]
-pub struct Orders<const T: bool> {
-    sorted: Vec<Order>,
-}
 
 impl<const T: bool> Orders<T> {
     pub const MAX_SIZE: usize = 8 + 4 + 32 * Order::MAX_SIZE;
@@ -401,20 +434,7 @@ impl<const T: bool> Orders<T> {
     }
 }
 
-pub type Bids = Orders<true>;
-pub type Asks = Orders<false>;
 
-pub struct RequestProceeds {
-    pub coin_unlocked: u64,
-    pub native_pc_unlocked: u64,
-
-    pub coin_credit: u64,
-    pub native_pc_credit: u64,
-
-    pub coin_debit: u64,
-    pub native_pc_debit: u64,
-    pub jit_data: Vec<JitStruct>,
-}
 
 macro_rules! impl_incr_method {
     ($method:ident, $var:ident) => {
@@ -434,29 +454,9 @@ impl RequestProceeds {
     impl_incr_method!(debit_native_pc, native_pc_debit);
 }
 
-pub struct OrderBook<'a> {
-    bids: &'a mut Bids,
-    asks: &'a mut Asks,
-    market: &'a Market,
-}
-
-pub struct NewOrderParams {
-    side: Side,
-    order_type: OrderType,
-    order_id: u128,
-    max_coin_qty: u64,
-    native_pc_qty_locked: Option<u64>,
-    owner: Pubkey,
-    owner_slot: u8,
-}
-
-struct OrderRemaining {
-    coin_qty_remaining: u64,
-    native_pc_qty_remaining: Option<u64>,
-}
 
 impl<'a> OrderBook<'a> {
-    fn new_order(
+    pub fn new_order(
         &mut self,
         params: NewOrderParams,
         event_q: &mut EventQueue,
@@ -536,7 +536,7 @@ impl<'a> OrderBook<'a> {
     }
 }
 
-struct NewBidParams {
+pub struct NewBidParams {
     max_coin_qty: u64,
     native_pc_qty_locked: u64,
     limit_price: Option<u64>,
@@ -547,7 +547,7 @@ struct NewBidParams {
     post_allowed: bool,
 }
 
-struct NewAskParams {
+pub struct NewAskParams {
     max_qty: u64,
     limit_price: u64,
     order_id: u128,
@@ -657,21 +657,22 @@ pub enum OrderType {
 #[account]
 #[derive(Default)]
 pub struct OpenOrders {
-    is_initialized: bool,
+    pub is_initialized: bool,
 
-    market: Pubkey,
-    authority: Pubkey,
+    pub market: Pubkey,
+    pub authority: Pubkey,
 
-    native_coin_free: u64,
-    native_pc_free: u64,
+    pub native_coin_free: u64,
+    pub native_pc_free: u64,
 
-    native_coin_total: u64,
-    native_pc_total: u64,
+    pub native_coin_total: u64,
+    pub native_pc_total: u64,
 
-    free_slot_bits: u8,
-    is_bid_bits: u8,
-    orders: [u128; 8],
+    pub free_slot_bits: u8,
+    pub is_bid_bits: u8,
+    pub orders: [u128; 8],
 }
+
 
 #[derive(Accounts)]
 //#[instruction(side: Side)]

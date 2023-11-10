@@ -13,6 +13,8 @@ use resp;
 
 use crate::state::*;
 use crate::errors::*;
+use crate::errors::ErrorCode;
+
 
 impl Market {
     pub const MAX_SIZE: usize = 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 32 + 32 + 32 + 32 + 32;

@@ -17,6 +17,8 @@ mod errors;
 use utils2::*;
 use state::*;
 use errors::*;
+use crate::errors::ErrorCode;
+
 
 declare_id!("4jde1a6MyoiwLVqB6UH5mBJp3gbpk1wcth8TZJfnf1V9");
 //local
