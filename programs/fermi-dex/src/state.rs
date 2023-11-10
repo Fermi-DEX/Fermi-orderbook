@@ -537,32 +537,33 @@ impl<'a> OrderBook<'a> {
 }
 
 pub struct NewBidParams {
-    max_coin_qty: u64,
-    native_pc_qty_locked: u64,
-    limit_price: Option<u64>,
-    order_id: u128,
-    owner: Pubkey,
-    owner_slot: u8,
-    post_only: bool,
-    post_allowed: bool,
+    pub max_coin_qty: u64,
+    pub native_pc_qty_locked: u64,
+    pub limit_price: Option<u64>,
+    pub order_id: u128,
+    pub owner: Pubkey,
+    pub owner_slot: u8,
+    pub post_only: bool,
+    pub post_allowed: bool,
 }
 
 pub struct NewAskParams {
-    max_qty: u64,
-    limit_price: u64,
-    order_id: u128,
-    owner: Pubkey,
-    owner_slot: u8,
-    post_only: bool,
-    post_allowed: bool,
+    pub max_qty: u64,
+    pub limit_price: u64,
+    pub order_id: u128,
+    pub owner: Pubkey,
+    pub owner_slot: u8,
+    pub post_only: bool,
+    pub post_allowed: bool,
 }
 
 pub struct CancelOrderParams {
-    side: Side,
-    order_id: u128,
-    expected_owner: Pubkey,
-    expected_owner_slot: u8,
+    pub side: Side,
+    pub order_id: u128,
+    pub expected_owner: Pubkey,
+    pub expected_owner_slot: u8,
 }
+    
 
 
 #[derive(Accounts)]
