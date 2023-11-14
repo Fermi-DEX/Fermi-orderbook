@@ -155,7 +155,10 @@ pub struct EventQueueIterator<'a> {
     pub index: u64,
 }
 
-#[derive(Copy, Clone, Default, AnchorSerialize, AnchorDeserialize)]
+
+//#[derive(Copy, Clone, Default, AnchorSerialize, AnchorDeserialize)]
+#[repr(packed)]
+#[zero_copy]
 pub struct Order {
     pub order_id: u128,
     pub qty: u64,
@@ -186,8 +189,9 @@ pub struct Orders<const T: bool> {
     pub sorted: Vec<Order>,
 } */
 
-#[repr(packed)]
+
 #[account(zero_copy)]
+#[repr(packed)]
 pub struct Orders<const T: bool> {
     pub sorted: [Order; 100], // Adjust MAX_ORDERS accordingly
     // other fields...
@@ -395,16 +399,17 @@ impl<const T: bool> Orders<T> {
     } */
 
     pub fn find_bbo(&self) -> Result<&Order> {
-        require!(self.sorted.len() > 0, ErrorCode::EmptyOrders);
+        let mut  srtd = self.sorted;
+        require!(srtd.len() > 0, ErrorCode::EmptyOrders);
 
         // Find the first order with a non-zero price
         let mut index = 0;
-        while index < self.sorted.len() && self.sorted[index].price() == 0 {
+        while index < srtd.len() && srtd[index].price() == 0 {
             index += 1;
         }
 
         // Check if a non-zero order was found
-        if index < self.sorted.len() {
+        if index < srtd.len() {
             Ok(&self.sorted[index])
         } else {
             msg!("all orders 0");
@@ -416,16 +421,17 @@ impl<const T: bool> Orders<T> {
     }
 
     pub fn find_bbo_mut(&mut self) -> Result<&mut Order> {
-        require!(self.sorted.len() > 0, ErrorCode::EmptyOrders);
+        let mut srtd = self.sorted;
+        require!(srtd.len() > 0, ErrorCode::EmptyOrders);
 
         // Find the first order with a non-zero price
         let mut index = 0;
-        while index < self.sorted.len() && self.sorted[index].price() == 0 {
+        while index < srtd.len() && srtd[index].price() == 0 {
             index += 1;
         }
 
         // Check if a non-zero order was found
-        if index < self.sorted.len() {
+        if index < srtd.len() {
             Ok(&mut self.sorted[index])
         } else {
             msg!("all orders 0");
@@ -442,7 +448,7 @@ impl<const T: bool> Orders<T> {
     }*/
     
 
-    /*pub fn insert(&mut self, order: Order) -> Result<()> {
+    /*pub fn insert(&mut self, order: Order) -> Result<()> 
         self.sorted.push(order.clone());
         let mut is_found = false;
         for i in 0..(self.sorted.len() - 1) {
@@ -463,16 +469,17 @@ impl<const T: bool> Orders<T> {
         } */
 
         pub fn insert(&mut self, order: Order) -> Result<()> {
-            let mut index_to_insert = self.sorted.len();
-            for i in (0..self.sorted.len()).rev() {
+            let mut  srtd = self.sorted;
+            let mut index_to_insert = srtd.len();
+            for i in (0..srtd.len()).rev() {
                 if T {
-                    if self.sorted[i].price() < order.price() {
+                    if srtd[i].price() < order.price() {
                         index_to_insert = i;
                     } else {
                         break;
                     }
                 } else {
-                    if self.sorted[i].price() > order.price() {
+                    if srtd[i].price() > order.price() {
                         index_to_insert = i;
                     } else {
                         break;
@@ -523,17 +530,19 @@ impl<const T: bool> Orders<T> {
     } */
 
     pub fn delete(&mut self, order_id: u128) -> Result<()> {
-        let mut index_to_remove = self.sorted.len();
-        for i in 0..self.sorted.len() {
-            if self.sorted[i].order_id == order_id {
+        let mut srtd = self.sorted;
+        let mut index_to_remove = srtd.len();
+        for i in 0..srtd.len() {
+            if srtd[i].order_id == order_id {
                 index_to_remove = i;
                 break;
             }
         }
 
-        if index_to_remove < self.sorted.len() {
+        if index_to_remove < srtd.len() {
             // Set the values to zero instead of using pop
-            self.sorted[index_to_remove] = Order::default();
+            //srtd[index_to_remove] = Order::default();
+            //TBD
         }
 
         Ok(())
@@ -554,9 +563,10 @@ impl<const T: bool> Orders<T> {
         //let worst_index = self.sorted.iter().position(|order| order = self.find_bbo().unwrap()).unwrap();
         //let worst_index = self.sorted.iter().position(self.find_bbo().unwrap());
         let worst_index = 0;
+        let worst_order = srtd[worst_index];
         // Replace the worst order with a default (zero) order
-        let worst_order = std::mem::replace(&mut srtd[worst_index], Order::default());
-    
+        //let worst_order = std::mem::replace(&mut srtd[worst_index], Order::default());
+        //TBD
         Ok(worst_order)
     }
 }
