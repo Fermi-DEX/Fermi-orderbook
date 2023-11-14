@@ -353,7 +353,7 @@ impl<'a> OrderBook<'a> {
                 msg!("event.side: {}", "Bid");
                 msg!("event.release_funds: {}", "true");
                 msg!("event.native_qty_unlocked: {}", order.qty * order.price() * pc_lot_size);
-                msg!("event.order_id: {}", order.order_id);
+                //msg!("event.order_id: {}", order.order_id);
                 msg!("event.order_id_second: {}", 0);
                 msg!("event.order: {}", order.owner);
                 msg!("event.owner_slot: {}", order.owner_slot);
@@ -429,7 +429,7 @@ impl<'a> OrderBook<'a> {
                 msg!("event.maker: {}", "true");
                 msg!("event.native_qty_paid: {}", trade_qty * coin_lot_size);
                 msg!("event.native_qty_received: {}", native_maker_pc_qty);
-                msg!("event.order_id: {}", best_offer.order_id);
+               // msg!("event.order_id: {}", best_offer.order_id);
                 msg!("event.order_id_second: {}", order_id);
                 msg!("event.owner: {}", best_offer.owner);
                 msg!("owner_slot: {}", best_offer.owner_slot);
@@ -662,7 +662,7 @@ impl<'a> OrderBook<'a> {
                 msg!("event.release_funds: {}", true);
                 msg!("event.native_qty_unlocked: {}", order.qty * coin_lot_size);
                 msg!("event.native_qty_still_locked: {}", "0");
-                msg!("event.order_id: {}", order.order_id);
+                /*msg!("event.order_id: {}", order.order_id);*/
                 msg!("event.owner: {}", order.owner);
                 msg!("event.owner_slot: {}", order.owner_slot);
                 msg!("event.finalised: {}", "0");
@@ -736,7 +736,7 @@ impl<'a> OrderBook<'a> {
             msg!("event.maker: {}", "true");
             msg!("event.native_qty_paid: {}", trade_qty * coin_lot_size);
             msg!("event.native_qty_received: {}", trade_qty * coin_lot_size);
-            msg!("event.order_id: {}", best_bid.order_id);
+           /* msg!("event.order_id: {}", best_bid.order_id);*/
             msg!("event.order_id_second: {}", order_id);
             msg!("event.owner: {}", best_bid.owner);
             msg!("event.owner_slot: {}", best_bid.owner_slot);

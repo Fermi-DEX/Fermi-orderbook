@@ -830,9 +830,12 @@
           {
             "name": "sorted",
             "type": {
-              "vec": {
-                "defined": "Order"
-              }
+              "array": [
+                {
+                  "defined": "Order"
+                },
+                100
+              ]
             }
           }
         ]
