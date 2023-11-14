@@ -179,10 +179,18 @@ pub struct EventQueue {
     pub buf: [Event; 100], // Used zero_copy to expand eventsQ size
 }
 
+/* 
 #[account]
 #[derive(Default)]
 pub struct Orders<const T: bool> {
     pub sorted: Vec<Order>,
+} */
+
+#[repr(packed)]
+#[account(zero_copy)]
+pub struct Orders<const T: bool> {
+    pub sorted: [Order; 100], // Adjust MAX_ORDERS accordingly
+    // other fields...
 }
 
 pub type Bids = Orders<true>;
@@ -649,7 +657,9 @@ pub struct InitializeMarket<'info> {
         seeds = [b"bids".as_ref(), market.key().as_ref()],
         bump,
     )]
-    pub bids: Box<Account<'info, Bids>>,
+   // pub bids: Box<Account<'info, Bids>>,
+    pub bids: AccountLoader<'info, Bids>,
+
     #[account(
         init,
         payer = authority,
@@ -657,7 +667,8 @@ pub struct InitializeMarket<'info> {
         seeds = [b"asks".as_ref(), market.key().as_ref()],
         bump,
     )]
-    pub asks: Box<Account<'info, Asks>>,
+    //pub asks: Box<Account<'info, Asks>>,
+    pub asks: AccountLoader<'info, Asks>,
 
     #[account(
         init,
@@ -760,10 +771,14 @@ pub struct FinaliseMatch<'info>{
     pub coin_mint: Account<'info, Mint>,
     pub pc_mint: Account<'info, Mint>,
 
+
     #[account(mut)]
-    pub bids: Box<Account<'info, Bids>>,
+    //pub bids: Box<Account<'info, Bids>>,
+    pub bids: AccountLoader<'info, Bids>,
+    
     #[account(mut)]
-    pub asks: Box<Account<'info, Asks>>,
+    //pub asks: Box<Account<'info, Asks>>,
+    pub asks: AccountLoader<'info, Asks>,
 
     #[account(mut)]
     pub req_q: Box<Account<'info, RequestQueue>>,
@@ -843,10 +858,17 @@ pub struct NewOrder<'info> {
     )]
     pub payer: Account<'info, TokenAccount>,
 
+    //#[account(mut)]
+    //pub bids: Box<Account<'info, Bids>>,
+   // pub bids: AccountLoader<'info, Bids>,
+
     #[account(mut)]
-    pub bids: Box<Account<'info, Bids>>,
+    //pub asks: Box<Account<'info, Asks>>,
+    pub bids: AccountLoader<'info, Bids>,
+
     #[account(mut)]
-    pub asks: Box<Account<'info, Asks>>,
+    pub asks: AccountLoader<'info, Asks>,
+
 
     #[account(mut)]
     pub req_q: Box<Account<'info, RequestQueue>>,
@@ -1042,10 +1064,14 @@ pub struct CancelOrder<'info> {
 
     #[account(mut)]
     pub market: Box<Account<'info, Market>>,
+   #[account(mut)]
+    //pub bids: Box<Account<'info, Bids>>,
+    pub bids: AccountLoader<'info, Bids>,
+    
     #[account(mut)]
-    pub bids: Box<Account<'info, Bids>>,
-    #[account(mut)]
-    pub asks: Box<Account<'info, Asks>>,
+    //pub asks: Box<Account<'info, Asks>>,
+    pub asks: AccountLoader<'info, Asks>,
+
     #[account(mut)]
     pub event_q: AccountLoader<'info, EventQueue>,
     pub authority: Signer<'info>,

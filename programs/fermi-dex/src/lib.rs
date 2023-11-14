@@ -63,7 +63,8 @@ pub mod fermi_dex {
         let event_q = &mut ctx.accounts.event_q.load_mut();
         let openorders = &mut ctx.accounts.open_orders;
         let authority = ctx.accounts.authority.key();
-
+        let bids = &mut ctx.accounts.bids.load_mut()?;
+        let asks = &mut ctx.accounts.asks.load_mut()?;
         //check openorders owner
          
         require!(openorders.authority == authority, ErrorCode::OrderNotFound);
@@ -83,7 +84,7 @@ pub mod fermi_dex {
         //remove order from orderbook
         let mut order_book = OrderBook {
             bids,
-            asks: &mut ctx.accounts.asks,
+            asks,
             market: &mut ctx.accounts.market,
         };
 
@@ -111,6 +112,8 @@ pub mod fermi_dex {
         let event_q = &mut ctx.accounts.event_q.load_mut();
         let openorders = &mut ctx.accounts.open_orders;
         let authority = ctx.accounts.authority.key();
+        let bids = &mut ctx.accounts.bids.load_mut()?;
+        let asks = &mut ctx.accounts.asks.load_mut()?;
 
 
         //check openorders owner
@@ -129,7 +132,7 @@ pub mod fermi_dex {
         require!(x == 1, ErrorCode::OrderNotFound); 
 
         let mut order_book = OrderBook {
-            bids: &mut ctx.accounts.bids,
+            bids,
             asks,
             market: &mut ctx.accounts.market,
         };
@@ -358,8 +361,8 @@ pub mod fermi_dex {
         let coin_vault = &ctx.accounts.coin_vault;
         let pc_vault = &ctx.accounts.pc_vault;
         let payer = &ctx.accounts.payer;
-        let bids = &mut ctx.accounts.bids;
-        let asks = &mut ctx.accounts.asks;
+        let bids = &mut ctx.accounts.bids.load_mut()?;
+        let asks = &mut ctx.accounts.asks.load_mut()?;
         let req_q = &mut ctx.accounts.req_q;
         let event_q = &mut ctx.accounts.event_q.load_mut();
         let authority = &ctx.accounts.authority;
