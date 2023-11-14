@@ -547,14 +547,15 @@ impl<const T: bool> Orders<T> {
     }*/
 
     pub fn delete_worst(&mut self) -> Result<Order> {
-        require!(!self.sorted.is_empty(), ErrorCode::EmptyOrders);
+        let mut srtd = self.sorted;
+        require!(!srtd.is_empty(), ErrorCode::EmptyOrders);
     
         // Find the index of the worst order
         //let worst_index = self.sorted.iter().position(|order| order = self.find_bbo().unwrap()).unwrap();
         //let worst_index = self.sorted.iter().position(self.find_bbo().unwrap());
         let worst_index = 0;
         // Replace the worst order with a default (zero) order
-        let worst_order = std::mem::replace(&mut self.sorted[worst_index], Order::default());
+        let worst_order = std::mem::replace(&mut srtd[worst_index], Order::default());
     
         Ok(worst_order)
     }
