@@ -85,7 +85,8 @@
           "name": "pcLotSize",
           "type": "u64"
         }
-      ]
+      ],
+      "returns": null
     },
     {
       "name": "cancelBid",
@@ -130,7 +131,8 @@
           "name": "expectedOwner",
           "type": "publicKey"
         }
-      ]
+      ],
+      "returns": null
     },
     {
       "name": "cancelAsk",
@@ -175,7 +177,8 @@
           "name": "expectedOwner",
           "type": "publicKey"
         }
-      ]
+      ],
+      "returns": null
     },
     {
       "name": "depositPcTokens",
@@ -226,7 +229,8 @@
           "name": "amount",
           "type": "u64"
         }
-      ]
+      ],
+      "returns": null
     },
     {
       "name": "depositCoinTokens",
@@ -277,7 +281,8 @@
           "name": "amount",
           "type": "u64"
         }
-      ]
+      ],
+      "returns": null
     },
     {
       "name": "withdrawCoins",
@@ -343,7 +348,8 @@
           "name": "amount",
           "type": "u64"
         }
-      ]
+      ],
+      "returns": null
     },
     {
       "name": "withdrawTokens",
@@ -409,7 +415,8 @@
           "name": "amount",
           "type": "u64"
         }
-      ]
+      ],
+      "returns": null
     },
     {
       "name": "newOrder",
@@ -520,7 +527,8 @@
             "defined": "OrderType"
           }
         }
-      ]
+      ],
+      "returns": null
     },
     {
       "name": "finaliseMatchesBid",
@@ -615,13 +623,11 @@
           "name": "event2Slot",
           "type": "u8"
         }
-      ]
+      ],
+      "returns": null
     },
     {
       "name": "finaliseMatchesAsk",
-      "docs": [
-        "just in time transfers for ask side"
-      ],
       "accounts": [
         {
           "name": "openOrdersOwner",
@@ -708,7 +714,8 @@
           "name": "event2Slot",
           "type": "u8"
         }
-      ]
+      ],
+      "returns": null
     }
   ],
   "accounts": [
@@ -1405,8 +1412,5 @@
       "name": "Error",
       "msg": "Error"
     }
-  ],
-  "metadata": {
-    "address": "4jde1a6MyoiwLVqB6UH5mBJp3gbpk1wcth8TZJfnf1V9"
-  }
+  ]
 }

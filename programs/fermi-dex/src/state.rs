@@ -390,8 +390,9 @@ impl<const T: bool> Orders<T> {
         require!(self.sorted.len() > 0, ErrorCode::EmptyOrders);
         Ok(&mut self.sorted[0])
     }
+    
 
-    pub fn insert(&mut self, order: Order) -> Result<()> {
+    /*pub fn insert(&mut self, order: Order) -> Result<()> {
         self.sorted.push(order.clone());
         let mut is_found = false;
         for i in 0..(self.sorted.len() - 1) {
@@ -409,12 +410,34 @@ impl<const T: bool> Orders<T> {
             if is_found {
                 self.sorted[i + 1] = self.sorted[i];
             }
+        } */
+
+        pub fn insert(&mut self, order: Order) -> Result<()> {
+            let mut index_to_insert = self.sorted.len();
+            for i in (0..self.sorted.len()).rev() {
+                if T {
+                    if self.sorted[i].price() < order.price() {
+                        index_to_insert = i;
+                    } else {
+                        break;
+                    }
+                } else {
+                    if self.sorted[i].price() > order.price() {
+                        index_to_insert = i;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            Ok(())
         }
+            
+    
 
-        Ok(())
-    }
+       
+    
 
-    pub fn delete(&mut self, order_id: u128) -> Result<()> {
+    /*pub fn delete(&mut self, order_id: u128) -> Result<()> {
         let mut is_found = false;
         for i in 0..(self.sorted.len() - 1) {
             if self.sorted[i].order_id == order_id {
@@ -427,13 +450,36 @@ impl<const T: bool> Orders<T> {
         self.sorted.pop();
 
         Ok(())
+    }*/
+    pub fn delete(&mut self, order_id: u128) -> Result<()> {
+        let mut index_to_remove = self.sorted.len();
+        for i in 0..self.sorted.len() {
+            if self.sorted[i].order_id == order_id {
+                index_to_remove = i;
+                break;
+            }
+        }
+
+        if index_to_remove < self.sorted.len() {
+            for i in index_to_remove..self.sorted.len() - 1 {
+                self.sorted[i] = self.sorted[i + 1];
+            }
+            self.sorted.pop();
+        }
+
+        Ok(())
     }
+
+    // ... (unchanged code)
+
 
     pub fn delete_worst(&mut self) -> Result<Order> {
         require!(!self.sorted.is_empty(), ErrorCode::EmptyOrders);
         Ok(self.sorted.pop().unwrap())
     }
 }
+
+
 
 
 
