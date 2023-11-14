@@ -389,15 +389,57 @@ impl Order {
 impl<const T: bool> Orders<T> {
     pub const MAX_SIZE: usize = 8 + 4 + 32 * Order::MAX_SIZE;
 
-    pub fn find_bbo(&self) -> Result<&Order> {
+    /*pub fn find_bbo(&self) -> Result<&Order> {
         require!(self.sorted.len() > 0, ErrorCode::EmptyOrders);
         Ok(&self.sorted[0])
+    } */
+
+    pub fn find_bbo(&self) -> Result<&Order> {
+        require!(self.sorted.len() > 0, ErrorCode::EmptyOrders);
+
+        // Find the first order with a non-zero price
+        let mut index = 0;
+        while index < self.sorted.len() && self.sorted[index].price() == 0 {
+            index += 1;
+        }
+
+        // Check if a non-zero order was found
+        if index < self.sorted.len() {
+            Ok(&self.sorted[index])
+        } else {
+            msg!("all orders 0");
+
+            Ok(&self.sorted[index])
+            // If all orders have a price of zero, return an error
+           // Err(ErrorCode::EmptyOrders.into())
+        }
     }
 
     pub fn find_bbo_mut(&mut self) -> Result<&mut Order> {
         require!(self.sorted.len() > 0, ErrorCode::EmptyOrders);
-        Ok(&mut self.sorted[0])
+
+        // Find the first order with a non-zero price
+        let mut index = 0;
+        while index < self.sorted.len() && self.sorted[index].price() == 0 {
+            index += 1;
+        }
+
+        // Check if a non-zero order was found
+        if index < self.sorted.len() {
+            Ok(&mut self.sorted[index])
+        } else {
+            msg!("all orders 0");
+
+            Ok(&mut self.sorted[index])
+                        // If all orders have a price of zero, return an error
+            //Err(ErrorCode::EmptyOrders.into())
+        }
     }
+/* 
+    pub fn find_bbo_mut(&mut self) -> Result<&mut Order> {
+        require!(self.sorted.len() > 0, ErrorCode::EmptyOrders);
+        Ok(&mut self.sorted[0])
+    }*/
     
 
     /*pub fn insert(&mut self, order: Order) -> Result<()> {
@@ -458,7 +500,9 @@ impl<const T: bool> Orders<T> {
         self.sorted.pop();
 
         Ok(())
-    }*/
+    }
+
+
     pub fn delete(&mut self, order_id: u128) -> Result<()> {
         let mut index_to_remove = self.sorted.len();
         for i in 0..self.sorted.len() {
@@ -476,8 +520,24 @@ impl<const T: bool> Orders<T> {
         }
 
         Ok(())
-    }
+    } */
 
+    pub fn delete(&mut self, order_id: u128) -> Result<()> {
+        let mut index_to_remove = self.sorted.len();
+        for i in 0..self.sorted.len() {
+            if self.sorted[i].order_id == order_id {
+                index_to_remove = i;
+                break;
+            }
+        }
+
+        if index_to_remove < self.sorted.len() {
+            // Set the values to zero instead of using pop
+            self.sorted[index_to_remove] = Order::default();
+        }
+
+        Ok(())
+    }
     // ... (unchanged code)
 
 
