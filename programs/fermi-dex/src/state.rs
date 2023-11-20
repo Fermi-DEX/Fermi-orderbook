@@ -387,6 +387,12 @@ impl Order {
     pub fn price(&self) -> u64 {
         Order::price_from_order_id(self.order_id)
     }
+
+    pub fn is_active(&self) -> bool {
+        // The criterion for an active order. For example, 
+        // you might use a boolean field, non-zero price, or other criteria.
+        self.price() > 0
+    }
 }
 
 
@@ -469,6 +475,16 @@ impl<const T: bool> Orders<T> {
         } */
 
         pub fn insert(&mut self, order: Order) -> Result<()> {
+            let mut index_to_insert = self.sorted.iter()
+                .position(|o| !o.is_active() || (T && o.price() < order.price()) || (!T && o.price() > order.price()))
+                .ok_or(ErrorCode::EmptyOrders)?;
+            self.sorted[index_to_insert] = order;
+            Ok(())
+        }
+
+        
+
+        pub fn insert2(&mut self, order: Order) -> Result<()> {
             let mut  srtd = self.sorted;
             let mut index_to_insert = srtd.len();
             for i in (0..srtd.len()).rev() {
