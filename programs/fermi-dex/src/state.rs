@@ -405,6 +405,24 @@ impl<const T: bool> Orders<T> {
     } */
 
     pub fn find_bbo(&self) -> Result<&Order> {
+        match self.sorted.iter().enumerate().find(|&(_, order)| order.price() != 0) {
+            Some((index, _)) => Ok(&self.sorted[index]),
+            None => Err(ErrorCode::EmptyOrders)?,
+        }
+    }
+    
+    
+    pub fn find_bbo_mut(&mut self) -> Result<&mut Order> {
+        let index = self.sorted
+            .iter()
+            .enumerate()
+            .find(|&(_, order)| order.price() != 0)
+            .map(|(index, _)| index)
+            .ok_or(ErrorCode::EmptyOrders)?;
+    
+        Ok(&mut self.sorted[index])
+    }
+    pub fn find_bbo2(&self) -> Result<&Order> {
         let mut  srtd = self.sorted;
         require!(srtd.len() > 0, ErrorCode::EmptyOrders);
 
@@ -426,7 +444,7 @@ impl<const T: bool> Orders<T> {
         }
     }
 
-    pub fn find_bbo_mut(&mut self) -> Result<&mut Order> {
+    pub fn find_bbo_mut2(&mut self) -> Result<&mut Order> {
         let mut srtd = self.sorted;
         require!(srtd.len() > 0, ErrorCode::EmptyOrders);
 
