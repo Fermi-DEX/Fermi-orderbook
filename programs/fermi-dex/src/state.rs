@@ -193,7 +193,7 @@ pub struct Orders<const T: bool> {
 #[account(zero_copy)]
 #[repr(packed)]
 pub struct Orders<const T: bool> {
-    pub sorted: [Order; 100], // Adjust MAX_ORDERS accordingly
+    pub sorted: [Order; 2], // Adjust MAX_ORDERS accordingly
     // other fields...
 }
 
@@ -422,6 +422,7 @@ impl<const T: bool> Orders<T> {
     
         Ok(&mut self.sorted[index])
     }
+    /* 
     pub fn find_bbo2(&self) -> Result<&Order> {
         let mut  srtd = self.sorted;
         require!(srtd.len() > 0, ErrorCode::EmptyOrders);
@@ -464,7 +465,7 @@ impl<const T: bool> Orders<T> {
                         // If all orders have a price of zero, return an error
             //Err(ErrorCode::EmptyOrders.into())
         }
-    }
+    } */
 /* 
     pub fn find_bbo_mut(&mut self) -> Result<&mut Order> {
         require!(self.sorted.len() > 0, ErrorCode::EmptyOrders);
@@ -771,7 +772,8 @@ pub struct InitializeMarket<'info> {
     #[account(
         init,
         payer = authority,
-        space = 8 + Bids::MAX_SIZE,
+        //space = 8 + 10* Bids::MAX_SIZE,
+        space = 8 * 1264,
         seeds = [b"bids".as_ref(), market.key().as_ref()],
         bump,
     )]
@@ -781,7 +783,8 @@ pub struct InitializeMarket<'info> {
     #[account(
         init,
         payer = authority,
-        space = 8 + Asks::MAX_SIZE,
+      //  space = 8 + 10 * Asks::MAX_SIZE,
+        space = 8 * 1264,
         seeds = [b"asks".as_ref(), market.key().as_ref()],
         bump,
     )]
