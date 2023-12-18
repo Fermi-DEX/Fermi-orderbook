@@ -225,7 +225,7 @@ pub struct EventQueue {
 #[account]
 //#[derive(Serialize, Deserialize)]
 //#[derive(Default, Clone, Copy, AnchorSerialize, AnchorDeserialize)]
-struct Orders<const T: bool>{
+pub struct Orders<const T: bool>{
     sorted: BTreeMap<u128, Order>, 
     next_bid_id: u128,
 }
@@ -452,7 +452,7 @@ impl<const T: bool> Orders<T> {
         let id = self.next_bid_id;  
         self.next_bid_id += 1;
         
-        order.id = id;
+        order.order_id = id;
         self.sorted.insert(id, order);
         Ok(())
     }
@@ -462,7 +462,37 @@ impl<const T: bool> Orders<T> {
         Ok(())  
     }
 
-    pub fn delete_worst(&mut self) -> Option<(u128, Order)> {
+    pub fn delete_worst(&mut self) -> Result<Order> {
+        // Check if the map is empty and return an error if it is
+        require!(!self.sorted.is_empty(), ErrorCode::EmptyOrders);
+
+        // Get the key of the last element and remove it from the map
+        let last_key = self.sorted.keys().next_back().cloned();
+        match last_key {
+            Some(key) => {
+                // Remove and return the last element
+                Ok(self.sorted.remove(&key).unwrap())
+            },
+            None => {
+                // This case is unlikely due to the require! check above
+                Err(ErrorCode::EmptyOrders.into())
+            }
+        }
+    }
+
+    /*pub fn delete_worst(&mut self) -> Option<(u128, Order)> {
+        let worst_key = self.sorted.keys().next().cloned();
+        
+        worst_key.map(|key| {
+            let order = self.sorted.remove(&key).unwrap();
+            // Assuming Order can be converted into OrderRemaining
+            // You might need to adjust this conversion based on your actual types
+            Ok(Some(order.into()))
+        })
+        .ok_or(ErrorCode::EmptyOrders.into())
+    } */
+
+    pub fn delete_worst2(&mut self) -> Option<(u128, Order)> {
         let worst_key = self.sorted.keys().next().cloned();
         worst_key.map(|key| (key, self.sorted.remove(&key).unwrap()))
     }

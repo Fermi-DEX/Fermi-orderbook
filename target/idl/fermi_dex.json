@@ -823,10 +823,12 @@
           {
             "name": "sorted",
             "type": {
-              "vec": {
-                "defined": "Order"
-              }
+              "defined": "BTreeMap<u128,Order>"
             }
+          },
+          {
+            "name": "nextBidId",
+            "type": "u128"
           }
         ]
       }
