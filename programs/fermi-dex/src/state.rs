@@ -221,14 +221,13 @@ pub struct EventQueue {
 }
 
 
-use std::collections::BTreeMap;
 
 #[account]
 //#[derive(Serialize, Deserialize)]
 //#[derive(Default, Clone, Copy, AnchorSerialize, AnchorDeserialize)]
 struct Orders<const T: bool>{
-    sorted: BTreeMap<u32, Order>, 
-    next_bid_id: u32,
+    sorted: BTreeMap<u128, Order>, 
+    next_bid_id: u128,
 }
 
 /* 
@@ -458,9 +457,14 @@ impl<const T: bool> Orders<T> {
         Ok(())
     }
     
-    pub fn delete(&mut self, order_id: u32) -> Result<()> {
+    pub fn delete(&mut self, order_id: u128) -> Result<()> {
         self.sorted.remove(&order_id);
         Ok(())  
+    }
+
+    pub fn delete_worst(&mut self) -> Option<(u128, Order)> {
+        let worst_key = self.sorted.keys().next().cloned();
+        worst_key.map(|key| (key, self.sorted.remove(&key).unwrap()))
     }
     
     pub fn find_bbo(&self) -> Result<&Order> {
@@ -468,8 +472,16 @@ impl<const T: bool> Orders<T> {
             .next_back() // Get highest key
             .map(|(_id, order)| order)  
             //.ok();
-            .ok_or(ErrorCode::EmptyOrders.into()); 
+            .ok_or(ErrorCode::EmptyOrders.into())
     }
+
+    pub fn find_bbo_mut(&mut self) -> Result<&mut Order> {
+        return self.sorted.iter_mut()
+            .next_back() // Get highest key
+            .map(|(_id, order)| order)
+            .ok_or(ErrorCode::EmptyOrders.into());
+    }
+    
 
 }
 
