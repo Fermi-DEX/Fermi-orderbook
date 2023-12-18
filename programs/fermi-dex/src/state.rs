@@ -9,6 +9,15 @@ use anchor_spl::token::accessor::authority;
 use enumflags2::{bitflags, BitFlags};
 use resp;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
+
+//use zerovec::ZeroVec;
+//use zerovec::ule::{AsULE, PlainOldULE};
+//use zerovec::ule::AsULE;
+//use serde::{Serialize, Deserialize};
+
+
+
 
 
 use crate::utils2::*;
@@ -163,6 +172,37 @@ pub struct Order {
     pub owner: Pubkey,
     pub owner_slot: u8,
 }
+/* 
+#[repr(C)]
+struct OrderULE {
+    // Byte array representing the fields of Order
+    bytes: [u8; mem::size_of::<Order>()],
+}
+
+impl AsULE for Order {
+    //type ULE = PlainOldULE<4>; // Example: for a 4-byte structure
+    type ULE = OrderULE;
+
+    fn to_unaligned(self) -> Self::ULE {
+        let mut bytes = [0u8; std::mem::size_of::<Order>()];
+        // Serialize each field into bytes, respecting endianness
+        bytes[..16].copy_from_slice(&self.order_id.to_le_bytes());
+        bytes[16..24].copy_from_slice(&self.qty.to_le_bytes());
+        bytes[24..56].copy_from_slice(self.owner.to_bytes().as_ref());
+        bytes[56] = self.owner_slot;
+        PlainOldULE(bytes)
+    }
+
+    fn from_unaligned(unaligned: Self::ULE) -> Self {
+        let bytes = unaligned.0;
+        Order {
+            order_id: u128::from_le_bytes(bytes[..16].try_into().unwrap()),
+            qty: u64::from_le_bytes(bytes[16..24].try_into().unwrap()),
+            owner: Pubkey::new_from_array(bytes[24..56].try_into().unwrap()),
+            owner_slot: bytes[56],
+        }
+    }
+} */
 
 #[repr(packed)]
 #[zero_copy]
@@ -180,14 +220,29 @@ pub struct EventQueue {
     pub buf: [Event; 100], // Used zero_copy to expand eventsQ size
 }
 
+
+use std::collections::BTreeMap;
+
 #[account]
-#[derive(Default)]
+//#[derive(Serialize, Deserialize)]
+//#[derive(Default, Clone, Copy, AnchorSerialize, AnchorDeserialize)]
+struct Orders<const T: bool>{
+    sorted: BTreeMap<u32, Order>, 
+    next_bid_id: u32,
+}
+
+/* 
+#[account]
+#[derive(Serialize, Deserialize)]
+//#[derive(Default, Clone, Copy, AnchorSerialize, AnchorDeserialize)]
 //#[account(zero_copy)]
-pub struct Orders<const T: bool> {
+pub struct Orders2<const T: bool> {
     //pub sorted: RefCell<Vec<Order>> 
     //write sorted using refcell
-    pub sorted: Vec<Order>,
-}
+    pub sorted: ZeroVec<Order>,
+
+   // pub sorted: Vec<Order>,
+} */
 
 pub type Bids = Orders<true>;
 pub type Asks = Orders<false>;
@@ -228,6 +283,7 @@ pub struct OrderBook<'a> {
     pub bids: &'a mut Bids,
     pub asks: &'a mut Asks,
     pub market: &'a Market,
+    //pub next_bid_id: u32,
 }
 
 pub struct NewOrderParams {
@@ -382,7 +438,43 @@ impl Order {
 }
 
 
+/*
+struct OrderBook {
+    bids: BTreeMap<u32, Order>, 
+    asks: BTreeMap<u32, Order>
+} */
+
 impl<const T: bool> Orders<T> {
+    pub const MAX_SIZE: usize = 8 + 4 + 32 * Order::MAX_SIZE;
+
+
+    pub fn insert(&mut self, mut order: Order) -> Result<()> {
+        // Generate next id
+        let id = self.next_bid_id;  
+        self.next_bid_id += 1;
+        
+        order.id = id;
+        self.sorted.insert(id, order);
+        Ok(())
+    }
+    
+    pub fn delete(&mut self, order_id: u32) -> Result<()> {
+        self.sorted.remove(&order_id);
+        Ok(())  
+    }
+    
+    pub fn find_bbo(&self) -> Result<&Order> {
+        self.sorted.iter()
+            .next_back() // Get highest key
+            .map(|(_id, order)| order)  
+            //.ok();
+            .ok_or(ErrorCode::EmptyOrders.into()); 
+    }
+
+}
+
+/* 
+impl<const T: bool> Orders2<T> {
     pub const MAX_SIZE: usize = 8 + 4 + 32 * Order::MAX_SIZE;
 
     pub fn find_bbo(&self) -> Result<&Order> {
@@ -437,7 +529,7 @@ impl<const T: bool> Orders<T> {
         require!(!self.sorted.is_empty(), ErrorCode::EmptyOrders);
         Ok(self.sorted.pop().unwrap())
     }
-}
+} */
 
 
 
@@ -448,7 +540,7 @@ macro_rules! impl_incr_method {
             self.$var = self.$var.checked_add($var).unwrap();
         }
     };
-}
+} 
 
 impl RequestProceeds {
     impl_incr_method!(unlock_coin, coin_unlocked);
@@ -609,6 +701,8 @@ pub struct InitializeMarket<'info> {
         bump,
     )]
     pub bids: Box<Account<'info, Bids>>,
+    //pub bids: AccountLoader<'info, Bids>,
+
     #[account(
         init,
         payer = authority,
@@ -617,6 +711,8 @@ pub struct InitializeMarket<'info> {
         bump,
     )]
     pub asks: Box<Account<'info, Asks>>,
+    //pub asks: AccountLoader<'info, Asks>,
+
 
     #[account(
         init,

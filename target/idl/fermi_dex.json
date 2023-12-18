@@ -1095,15 +1095,15 @@
                 "type": "bool"
               },
               {
-                "name": "native_qty_paid",
+                "name": "nativeQtyPaid",
                 "type": "u64"
               },
               {
-                "name": "native_qty_received",
+                "name": "nativeQtyReceived",
                 "type": "u64"
               },
               {
-                "name": "order_id",
+                "name": "orderId",
                 "type": "u128"
               },
               {
@@ -1111,7 +1111,7 @@
                 "type": "publicKey"
               },
               {
-                "name": "owner_slot",
+                "name": "ownerSlot",
                 "type": "u8"
               },
               {
@@ -1123,7 +1123,7 @@
                 "type": "publicKey"
               },
               {
-                "name": "order_id_second",
+                "name": "orderIdSecond",
                 "type": "u128"
               }
             ]
@@ -1138,19 +1138,19 @@
                 }
               },
               {
-                "name": "release_funds",
+                "name": "releaseFunds",
                 "type": "bool"
               },
               {
-                "name": "native_qty_unlocked",
+                "name": "nativeQtyUnlocked",
                 "type": "u64"
               },
               {
-                "name": "native_qty_still_locked",
+                "name": "nativeQtyStillLocked",
                 "type": "u64"
               },
               {
-                "name": "order_id",
+                "name": "orderId",
                 "type": "u128"
               },
               {
@@ -1158,7 +1158,7 @@
                 "type": "publicKey"
               },
               {
-                "name": "owner_slot",
+                "name": "ownerSlot",
                 "type": "u8"
               },
               {
@@ -1181,15 +1181,15 @@
                 "type": "bool"
               },
               {
-                "name": "native_qty_paid",
+                "name": "nativeQtyPaid",
                 "type": "u64"
               },
               {
-                "name": "native_qty_received",
+                "name": "nativeQtyReceived",
                 "type": "u64"
               },
               {
-                "name": "order_id",
+                "name": "orderId",
                 "type": "u128"
               },
               {
@@ -1197,7 +1197,7 @@
                 "type": "publicKey"
               },
               {
-                "name": "owner_slot",
+                "name": "ownerSlot",
                 "type": "u8"
               },
               {
@@ -1228,27 +1228,27 @@
                 }
               },
               {
-                "name": "order_type",
+                "name": "orderType",
                 "type": {
                   "defined": "OrderType"
                 }
               },
               {
-                "name": "order_id",
+                "name": "orderId",
                 "type": "u128"
               },
               {
-                "name": "max_coin_qty",
+                "name": "maxCoinQty",
                 "type": "u64"
               },
               {
-                "name": "native_pc_qty_locked",
+                "name": "nativePcQtyLocked",
                 "type": {
                   "option": "u64"
                 }
               },
               {
-                "name": "owner_slot",
+                "name": "ownerSlot",
                 "type": "u8"
               },
               {
@@ -1267,19 +1267,19 @@
                 }
               },
               {
-                "name": "order_id",
+                "name": "orderId",
                 "type": "u128"
               },
               {
-                "name": "cancel_id",
+                "name": "cancelId",
                 "type": "u64"
               },
               {
-                "name": "expected_owner_slot",
+                "name": "expectedOwnerSlot",
                 "type": "u8"
               },
               {
-                "name": "expected_owner",
+                "name": "expectedOwner",
                 "type": "publicKey"
               }
             ]
@@ -1316,6 +1316,24 @@
             "name": "PostOnly"
           }
         ]
+      }
+    },
+    {
+      "name": "Bids",
+      "type": {
+        "kind": "alias",
+        "value": {
+          "defined": "Orders<true>"
+        }
+      }
+    },
+    {
+      "name": "Asks",
+      "type": {
+        "kind": "alias",
+        "value": {
+          "defined": "Orders<false>"
+        }
       }
     }
   ],
@@ -1405,8 +1423,5 @@
       "name": "Error",
       "msg": "Error"
     }
-  ],
-  "metadata": {
-    "address": "2BM843fAN55fqsMGidaqNr1P4127YLcxvTM5W4B2gNpn"
-  }
+  ]
 }
