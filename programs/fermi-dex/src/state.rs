@@ -223,8 +223,10 @@ pub struct EventQueue {
 
 
 #[account]
+//#[account(zero_copy)]
 //#[derive(Serialize, Deserialize)]
 //#[derive(Default, Clone, Copy, AnchorSerialize, AnchorDeserialize)]
+#[derive(Default)]
 pub struct Orders<const T: bool>{
     sorted: BTreeMap<u128, Order>, 
     next_bid_id: u128,

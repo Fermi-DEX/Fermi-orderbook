@@ -12,8 +12,8 @@ fermi_dex = "6BAGvnjkut578J85hS11M8DH2kLGtEbV49phfCoziMzJ"
 url = "https://rpc-devnet.helius.xyz/?api-key=69bea66a-a716-416b-8a45-a9c7049b0731"
 
 [provider]
-cluster ="devnet"
-#cluster="localnet"
+#cluster ="devnet"
+cluster="localnet"
 wallet = "/Users/dm/.config/solana/id.json"
 
 [scripts]
