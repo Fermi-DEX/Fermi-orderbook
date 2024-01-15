@@ -778,8 +778,6 @@ pub mod fermi_dex {
         );
 
         let events: Vec<Event> = vec![event1, event2];
-        let _order_id_general: u128 = 0;
-        let _first_event_done: bool = false;
         let mut eventBidFinalised: bool = false;
         let mut eventAskFinalised: bool = false;
 
@@ -915,17 +913,6 @@ pub mod fermi_dex {
                         let owner = parsed_event.owner;
                         msg!("deposit amount {}", deposit_amount);
                         open_orders_auth.credit_unlocked_pc(deposit_amount);
-                        let _bidder_fill = Event::new(EventView::Finalise {
-                            side: Side::Ask,
-                            maker: true,
-                            native_qty_paid: parsed_event.native_qty_paid,
-                            native_qty_received: parsed_event.native_qty_released,
-                            order_id: parsed_event.order_id,
-                            owner: parsed_event.owner,
-                            owner_slot: parsed_event.owner_slot,
-                            finalised: fin,
-                            cpty: owner,
-                        });
                         let mut event_updated = parsed_event.clone();
                         event_updated.finalised = 1;
                         let bidder_finalize = event_updated;
@@ -1069,8 +1056,7 @@ pub mod fermi_dex {
         );
 
         let events: Vec<Event> = vec![event1, event2];
-        let _order_id_general: u128 = 0;
-        let _first_event_done: bool = false;
+
         let mut eventBidFinalised: bool = false;
         let mut eventAskFinalised: bool = false;
 
@@ -1102,7 +1088,6 @@ pub mod fermi_dex {
 
                 let deposit_amount = qty_coin; //decimals already multiplied
                 msg!("Deposit amt {}", deposit_amount);
-                let _cpty_deposit_amt = qty_coin;
                 let deposit_vault = coin_vault;
 
                 if deposit_amount > 0 {
@@ -1154,17 +1139,6 @@ pub mod fermi_dex {
                             // finalized = 1 means succesfully transferred and settleable.
                             let fin: u8 = 1;
                             let owner = parsed_event.owner;
-                            let _asker_fill = Event::new(EventView::Finalise {
-                                side: Side::Ask,
-                                maker: true,
-                                native_qty_paid: parsed_event.native_qty_paid,
-                                native_qty_received: parsed_event.native_qty_released,
-                                order_id: parsed_event.order_id,
-                                owner: parsed_event.owner,
-                                owner_slot: parsed_event.owner_slot,
-                                finalised: fin,
-                                cpty: owner,
-                            });
                             let mut event_updated = parsed_event.clone();
                             event_updated.finalised = 1;
                             let asker_finalize = event_updated;
@@ -1191,7 +1165,6 @@ pub mod fermi_dex {
                                     .checked_add(deposit_amount)
                                     .unwrap();
                             };
-                            let _remaining_funds = 1;
                             eventAskFinalised = true;
                         }
                     }

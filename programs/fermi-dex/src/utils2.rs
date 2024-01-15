@@ -74,7 +74,6 @@ impl Event {
 
     #[inline(always)]
     pub fn new(view: EventView) -> Self {
-        let _current_timestamp: u64 = 0;
         let clock = match Clock::get() {
             Ok(clock) => clock,
             Err(program_error) => {
