@@ -1,12 +1,7 @@
-use anchor_lang::{accounts::account_info, prelude::*};
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Approve, Mint, Token, TokenAccount, Transfer},
-};
+use anchor_lang::prelude::*;
+use anchor_spl::token::{Approve, Transfer};
 
-use anchor_spl::token::accessor::authority;
-use enumflags2::{bitflags, BitFlags};
-use resp;
+use enumflags2::BitFlags;
 use solana_program::clock::Clock;
 
 mod errors;
@@ -14,16 +9,13 @@ mod state;
 mod utils2;
 
 use crate::errors::ErrorCodeCustom;
-use errors::*;
 use state::*;
-use utils2::*;
 
 //local
 declare_id!("3Ek56WB263s9WH7bhGtjpNkFk8V2UDXmvsKxDJ9RzmGR");
 
 #[program]
 pub mod fermi_dex {
-    use anchor_lang::prelude::borsh::de;
 
     use super::*;
 
@@ -123,7 +115,7 @@ pub mod fermi_dex {
         let mut x = 0;
         let mut slot: usize = 0;
         for (i, order) in openorders.orders.iter().enumerate() {
-            let mut order_int = *order;
+            let order_int = *order;
             if order_int == order_id {
                 x = 1;
                 slot = i;
@@ -217,7 +209,6 @@ pub mod fermi_dex {
         let open_orders = &mut ctx.accounts.open_orders;
         let market = &mut ctx.accounts.market;
         let coin_vault = &ctx.accounts.coin_vault;
-        let pc_vault = &ctx.accounts.pc_vault;
         let payer = &ctx.accounts.payer;
 
         let authority = &ctx.accounts.authority;
@@ -282,7 +273,6 @@ pub mod fermi_dex {
         let program_id = ctx.program_id;
         let open_orders = &mut ctx.accounts.open_orders;
         let market = &mut ctx.accounts.market;
-        let coin_vault = &ctx.accounts.coin_vault;
         let pc_vault = &ctx.accounts.pc_vault;
         let payer = &ctx.accounts.payer;
 
@@ -290,7 +280,7 @@ pub mod fermi_dex {
         let token_program = &ctx.accounts.token_program;
         let coin_mint = &ctx.accounts.coin_mint;
         let pc_mint = &ctx.accounts.pc_mint;
-        let (market_pda, bump_seed) = Pubkey::find_program_address(
+        let (_market_pda, bump_seed) = Pubkey::find_program_address(
             &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
             &program_id,
         );
@@ -363,8 +353,8 @@ pub mod fermi_dex {
         let event_q = &mut ctx.accounts.event_q.load_mut();
         let authority = &ctx.accounts.authority;
         let token_program = &ctx.accounts.token_program;
-        let coin_mint = &ctx.accounts.coin_mint;
-        let pc_mint = &ctx.accounts.pc_mint;
+        let _coin_mint = &ctx.accounts.coin_mint;
+        let _pc_mint = &ctx.accounts.pc_mint;
 
         if !open_orders.is_initialized {
             open_orders.init(market.key(), authority.key())?;
@@ -383,7 +373,6 @@ pub mod fermi_dex {
         msg!("timestamp is {}", current_timestamp);
         let deposit_amount;
         let deposit_vault;
-        let cpty_vault;
         let native_pc_qty_locked;
         match side {
             Side::Bid => {
@@ -395,7 +384,6 @@ pub mod fermi_dex {
                 let total_deposit_amount = lock_qty_native - free_qty_to_lock;
                 deposit_amount = total_deposit_amount; //for test with matching, L1044
                 deposit_vault = pc_vault;
-                cpty_vault = coin_vault;
 
                 market.pc_deposits_total = market
                     .pc_deposits_total
@@ -411,7 +399,6 @@ pub mod fermi_dex {
                 let total_deposit_amount = lock_qty_native - free_qty_to_lock;
                 deposit_amount = total_deposit_amount; //for test with matching, L1044
                 deposit_vault = coin_vault;
-                cpty_vault = pc_vault;
 
                 market.coin_deposits_total = market
                     .coin_deposits_total
@@ -450,7 +437,7 @@ pub mod fermi_dex {
         msg!("proessing request");
         order_book.process_request(&request, &mut event_q.as_mut().unwrap(), &mut proceeds)?;
         msg!("request processed");
-        
+
         {
             let coin_lot_size = market.coin_lot_size;
 
@@ -550,7 +537,6 @@ pub mod fermi_dex {
     // 3. Check that the owner of the defaulting openorders is the bidder/asker as the case may be.
     // 4. Check that the owner of the counterparty openorders is the asker/bidder as the case may be.
     // 5. Check that the events in question compose a match.
-
     pub fn cancel_with_penalty(
         ctx: Context<CancelWithPenalty>,
         side: Side,
@@ -885,6 +871,7 @@ pub mod fermi_dex {
                         msg!("Failed to transfer tokens: {:?}", err);
                         msg!("handling penalty payments!");
                         let penalty_amount = deposit_amount / 100;
+                        
                         // Deduct the penalty from the bidder's deposit
                         open_orders_auth.debit_locked_pc(penalty_amount);
 
@@ -1151,9 +1138,7 @@ pub mod fermi_dex {
                         transfer_ix,
                         seeds,
                     );
-                    // Prepare for penalty if transfer fails:
 
-                    // If transfer fails, handle penalty
                     msg!("attempting JIT transfers");
                     match utils2::custom_token_transfer(cpi_ctx, deposit_amount) {
                         Err(err) => {

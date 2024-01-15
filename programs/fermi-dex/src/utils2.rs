@@ -1,26 +1,19 @@
 use anchor_lang::{accounts::account_info, prelude::*};
 use anchor_spl::{
-    associated_token::AssociatedToken,
     token::{Approve, Mint, Token, TokenAccount, Transfer},
 };
 
-use anchor_spl::token::accessor::authority;
-use enumflags2::{bitflags, BitFlags};
-use resp;
+use enumflags2::BitFlags;
 use solana_program::clock::Clock;
 
-use anchor_lang::solana_program::account_info::AccountInfo;
 
-use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
-use anchor_lang::{context::CpiContext, Accounts};
+use anchor_lang::context::CpiContext;
 use anchor_lang::{solana_program, Result};
-use std::ops::Deref;
 
 pub use spl_token;
 pub use spl_token::ID;
 
-use crate::errors::*;
 use crate::state::*;
 
 use crate::errors::ErrorCodeCustom;

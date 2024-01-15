@@ -1,13 +1,4 @@
-use anchor_lang::{accounts::account_info, prelude::*};
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Approve, Mint, Token, TokenAccount, Transfer},
-};
-//use solana_sdk::instruction::{AccountMeta, Instruction};
-
-use anchor_spl::token::accessor::authority;
-use enumflags2::{bitflags, BitFlags};
-use resp;
+use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum ErrorCodeCustom {
