@@ -48,7 +48,7 @@ pub mod fermi_dex {
         expected_owner: Pubkey,
     ) -> Result<()> {
         let bids = &mut ctx.accounts.bids;
-        let event_q = &mut ctx.accounts.event_q.load_mut();
+        let _event_q = &mut ctx.accounts.event_q.load_mut();
         let openorders = &mut ctx.accounts.open_orders;
         let authority = ctx.accounts.authority.key();
 
@@ -63,7 +63,7 @@ pub mod fermi_dex {
         let mut x = 0;
         let mut slot: usize = 0;
         for (i, order) in openorders.orders.iter().enumerate() {
-            let mut order_int = *order;
+            let order_int = *order;
             if order_int == order_id {
                 x = 1;
                 slot = i;
@@ -101,7 +101,7 @@ pub mod fermi_dex {
         expected_owner: Pubkey,
     ) -> Result<()> {
         let asks = &mut ctx.accounts.asks;
-        let event_q = &mut ctx.accounts.event_q.load_mut();
+        let _event_q = &mut ctx.accounts.event_q.load_mut();
         let openorders = &mut ctx.accounts.open_orders;
         let authority = ctx.accounts.authority.key();
 
@@ -215,7 +215,7 @@ pub mod fermi_dex {
         let token_program = &ctx.accounts.token_program;
         let coin_mint = &ctx.accounts.coin_mint;
         let pc_mint = &ctx.accounts.pc_mint;
-        let (market_pda, bump_seed) = Pubkey::find_program_address(
+        let (_market_pda, bump_seed) = Pubkey::find_program_address(
             &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
             &program_id,
         );
@@ -445,31 +445,31 @@ pub mod fermi_dex {
                 coin_unlocked,
                 coin_credit,
 
-                native_pc_unlocked,
-                native_pc_credit,
+                native_pc_unlocked: _,
+                native_pc_credit: _,
 
                 coin_debit,
-                native_pc_debit,
+                native_pc_debit: _,
                 jit_data,
             } = proceeds;
-            let native_coin_unlocked = coin_unlocked.checked_mul(coin_lot_size).unwrap();
-            let native_coin_credit = coin_credit.checked_mul(coin_lot_size).unwrap();
-            let native_coin_debit = coin_debit.checked_mul(coin_lot_size).unwrap();
+            let _native_coin_unlocked = coin_unlocked.checked_mul(coin_lot_size).unwrap();
+            let _native_coin_credit = coin_credit.checked_mul(coin_lot_size).unwrap();
+            let _native_coin_debit = coin_debit.checked_mul(coin_lot_size).unwrap();
 
             let others = jit_data;
 
             msg!("going to loop!");
             for p in others {
                 msg!("heya {}", p.owner);
-                let mut owner_slot = p.owner_slot;
+                let owner_slot = p.owner_slot;
                 msg!("this is the way {}", owner_slot);
-                let mut owner_order = open_orders.orders[usize::from(owner_slot)];
-                let mut deposits = p.native_qty_paid;
+                let owner_order = open_orders.orders[usize::from(owner_slot)];
+                let deposits = p.native_qty_paid;
                 msg!("owner qty {}", owner_order);
                 msg!("dep {}", deposits);
             }
         }
-        let matched_amount_pc = proceeds.native_pc_credit;
+        let _matched_amount_pc = proceeds.native_pc_credit;
         let matched_amount_coin = proceeds.coin_credit;
 
         // if order is not crossed, creator is maker, and only needs to approve tokens.
@@ -751,9 +751,9 @@ pub mod fermi_dex {
         let open_orders_cpty = &mut ctx.accounts.open_orders_counterparty;
         let market = &ctx.accounts.market;
         let pc_vault = &ctx.accounts.pc_vault;
-        let req_q = &mut ctx.accounts.req_q;
+        let _req_q = &mut ctx.accounts.req_q;
         let event_q = &mut ctx.accounts.event_q.load_mut()?;
-        let authority = &ctx.accounts.authority;
+        let _authority = &ctx.accounts.authority;
         let token_program = &ctx.accounts.token_program;
         let coin_mint = &ctx.accounts.coin_mint;
         let pc_mint = &ctx.accounts.pc_mint;
@@ -778,8 +778,8 @@ pub mod fermi_dex {
         );
 
         let events: Vec<Event> = vec![event1, event2];
-        let mut order_id_general: u128 = 0;
-        let mut first_event_done: bool = false;
+        let _order_id_general: u128 = 0;
+        let _first_event_done: bool = false;
         let mut eventBidFinalised: bool = false;
         let mut eventAskFinalised: bool = false;
 
@@ -819,20 +819,20 @@ pub mod fermi_dex {
             msg!("side is {}", sider);
 
             if sider == 1 {
-                let mut qty_pc = parsed_event.native_qty_paid;
-                let mut qty_coin = parsed_event.native_qty_released;
-                let mut available_funds = open_orders_auth.native_pc_total;
+                let qty_pc = parsed_event.native_qty_paid;
+                let qty_coin = parsed_event.native_qty_released;
+                let available_funds = open_orders_auth.native_pc_total;
                 msg!("the available funds is {}", available_funds);
                 msg!("the required funds are {}", qty_pc);
 
-                let mut deposit_amount = qty_pc / (market.pc_lot_size * 10);
+                let deposit_amount = qty_pc / (market.pc_lot_size * 10);
                 msg!("Deposit amt {}", deposit_amount);
-                let mut cpty_deposit_amt = qty_coin;
-                let mut deposit_vault = pc_vault;
+                let cpty_deposit_amt = qty_coin;
+                let deposit_vault = pc_vault;
 
                 if deposit_amount > 0 {
                     // Derive the market's PDA and bump seed.
-                    let (market_pda, bump_seed) = Pubkey::find_program_address(
+                    let (_market_pda, bump_seed) = Pubkey::find_program_address(
                         &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
                         &program_id,
                     );
@@ -915,7 +915,7 @@ pub mod fermi_dex {
                         let owner = parsed_event.owner;
                         msg!("deposit amount {}", deposit_amount);
                         open_orders_auth.credit_unlocked_pc(deposit_amount);
-                        let bidder_fill = Event::new(EventView::Finalise {
+                        let _bidder_fill = Event::new(EventView::Finalise {
                             side: Side::Ask,
                             maker: true,
                             native_qty_paid: parsed_event.native_qty_paid,
@@ -941,7 +941,7 @@ pub mod fermi_dex {
                         eventBidFinalised = true;
                     }
                     if cpty_deposit_amt > 0 {}
-                    let mut remaining_funds = 0;
+                    let remaining_funds = 0;
                     if remaining_funds > 0 {
                         msg!("Newly locked PC for bidder {}", qty_pc);
                     }
@@ -960,7 +960,7 @@ pub mod fermi_dex {
                 }
             }
             if sider == 2 {
-                let mut eventFin = parsed_event.finalised;
+                let eventFin = parsed_event.finalised;
                 if eventFin == 1 {
                     eventAskFinalised = true;
                 }
@@ -987,8 +987,8 @@ pub mod fermi_dex {
                 .unwrap();
 
             //add pc to event2 owner
-            let mut qty_pc = event2.native_qty_released;
-            let mut qty_coin = event1.native_qty_released;
+            let qty_pc = event2.native_qty_released;
+            let qty_coin = event1.native_qty_released;
 
             ctx.accounts.open_orders_owner.native_pc_free = ctx
                 .accounts
@@ -1042,9 +1042,9 @@ pub mod fermi_dex {
         let open_orders_cpty = &mut ctx.accounts.open_orders_counterparty; // owner of event 2
         let market = &ctx.accounts.market;
         let coin_vault = &ctx.accounts.coin_vault;
-        let req_q = &mut ctx.accounts.req_q;
+        let _req_q = &mut ctx.accounts.req_q;
         let event_q = &mut ctx.accounts.event_q.load_mut()?;
-        let authority = &ctx.accounts.authority;
+        let _authority = &ctx.accounts.authority;
         let token_program = &ctx.accounts.token_program;
         let coin_mint = &ctx.accounts.coin_mint;
         let pc_mint = &ctx.accounts.pc_mint;
@@ -1069,8 +1069,8 @@ pub mod fermi_dex {
         );
 
         let events: Vec<Event> = vec![event1, event2];
-        let mut order_id_general: u128 = 0;
-        let mut first_event_done: bool = false;
+        let _order_id_general: u128 = 0;
+        let _first_event_done: bool = false;
         let mut eventBidFinalised: bool = false;
         let mut eventAskFinalised: bool = false;
 
@@ -1095,19 +1095,19 @@ pub mod fermi_dex {
             msg!("side is {}", sider);
 
             if sider == 2 {
-                let mut qty_coin = parsed_event.native_qty_paid;
-                let mut available_funds = open_orders_auth.native_coin_total;
+                let qty_coin = parsed_event.native_qty_paid;
+                let available_funds = open_orders_auth.native_coin_total;
                 msg!("the available funds is {}", available_funds);
                 msg!("the required funds are {}", qty_coin);
 
-                let mut deposit_amount = qty_coin; //decimals already multiplied
+                let deposit_amount = qty_coin; //decimals already multiplied
                 msg!("Deposit amt {}", deposit_amount);
-                let mut cpty_deposit_amt = qty_coin;
-                let mut deposit_vault = coin_vault;
+                let _cpty_deposit_amt = qty_coin;
+                let deposit_vault = coin_vault;
 
                 if deposit_amount > 0 {
                     // Derive the market's PDA and bump seed.
-                    let (market_pda, bump_seed) = Pubkey::find_program_address(
+                    let (_market_pda, bump_seed) = Pubkey::find_program_address(
                         &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
                         &program_id,
                     );
@@ -1154,7 +1154,7 @@ pub mod fermi_dex {
                             // finalized = 1 means succesfully transferred and settleable.
                             let fin: u8 = 1;
                             let owner = parsed_event.owner;
-                            let asker_fill = Event::new(EventView::Finalise {
+                            let _asker_fill = Event::new(EventView::Finalise {
                                 side: Side::Ask,
                                 maker: true,
                                 native_qty_paid: parsed_event.native_qty_paid,
@@ -1191,14 +1191,14 @@ pub mod fermi_dex {
                                     .checked_add(deposit_amount)
                                     .unwrap();
                             };
-                            let mut remaining_funds = 1;
+                            let _remaining_funds = 1;
                             eventAskFinalised = true;
                         }
                     }
                 }
                 if sider == 1 {
                     // check if event is finalised
-                    let mut eventFin = parsed_event.finalised;
+                    let eventFin = parsed_event.finalised;
                     if eventFin == 1 {
                         eventBidFinalised = true;
                     } else {

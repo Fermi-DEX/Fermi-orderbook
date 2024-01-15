@@ -1,6 +1,6 @@
-use anchor_lang::{accounts::account_info, prelude::*};
+use anchor_lang::{prelude::*};
 use anchor_spl::{
-    token::{Approve, Mint, Token, TokenAccount, Transfer},
+    token::{Transfer},
 };
 
 use enumflags2::BitFlags;
@@ -74,7 +74,7 @@ impl Event {
 
     #[inline(always)]
     pub fn new(view: EventView) -> Self {
-        let mut current_timestamp: u64 = 0;
+        let _current_timestamp: u64 = 0;
         let clock = match Clock::get() {
             Ok(clock) => clock,
             Err(program_error) => {
@@ -96,15 +96,15 @@ impl Event {
                 order_id,
                 owner,
                 owner_slot,
-                finalised,
-                cpty,
+                finalised: _,
+                cpty: _,
                 order_id_second,
             } => {
                 let mut flags = EventFlag::from_side(side) | EventFlag::Fill;
                 if maker {
                     flags |= EventFlag::Maker;
                 }
-                let mut finalised: u8 = 0;
+                let finalised: u8 = 0;
                 Event {
                     event_flags: flags.bits(),
                     owner_slot,
@@ -127,14 +127,14 @@ impl Event {
                 order_id,
                 owner,
                 owner_slot,
-                finalised,
+                finalised: _,
             } => {
                 let mut flags = EventFlag::from_side(side) | EventFlag::Out;
                 if release_funds {
                     flags |= EventFlag::ReleaseFunds;
                 }
-                let mut finalised: u8 = 0;
-                let mut cpty: Pubkey = owner;
+                let finalised: u8 = 0;
+                let _cpty: Pubkey = owner;
                 Event {
                     event_flags: flags.bits(),
                     owner_slot,
@@ -159,7 +159,7 @@ impl Event {
                 owner,
                 owner_slot,
                 finalised,
-                cpty,
+                cpty: _,
             } => {
                 let mut flags = EventFlag::from_side(side) | EventFlag::Fill;
                 if maker {
@@ -299,7 +299,7 @@ impl<'a> OrderBook<'a> {
 
         let mut coin_qty_remaining = max_coin_qty;
         let mut pc_qty_remaining = max_pc_qty;
-        let mut jit_data = vec![];
+        let jit_data = vec![];
 
         msg!("bid inserted");
         let insert_result = self.bids.insert(Order {
@@ -537,7 +537,7 @@ impl<'a> OrderBook<'a> {
             pc_qty_to_keep_locked
         );
 
-        let out = {
+        let _out = {
             let native_qty_still_locked = pc_qty_to_keep_locked * pc_lot_size;
             let native_qty_unlocked = native_pc_qty_remaining - native_qty_still_locked;
             to_release.unlock_native_pc(native_qty_unlocked);
@@ -874,25 +874,25 @@ impl<'a> OrderBook<'a> {
     pub fn cancel_order(
         &mut self,
         params: CancelOrderParams,
-        event_q: &mut EventQueue,
+        _event_q: &mut EventQueue,
     ) -> Result<()> {
         let CancelOrderParams {
-            side,
-            order_id,
-            expected_owner,
-            expected_owner_slot,
+            side: _,
+            order_id: _,
+            expected_owner: _,
+            expected_owner_slot: _,
         } = params;
         Ok(())
     }
 
-    pub fn cancel_order_bid(&mut self, side: bool, order_id: u128, owner: Pubkey) -> Result<()> {
+    pub fn cancel_order_bid(&mut self, _side: bool, order_id: u128, _owner: Pubkey) -> Result<()> {
         let orders = &mut *self.bids;
         orders.delete(order_id);
 
         Ok(())
     }
 
-    pub fn cancel_order_ask(&mut self, side: bool, order_id: u128, owner: Pubkey) -> Result<()> {
+    pub fn cancel_order_ask(&mut self, _side: bool, order_id: u128, _owner: Pubkey) -> Result<()> {
         let orders = &mut *self.asks;
         orders.delete(order_id);
 

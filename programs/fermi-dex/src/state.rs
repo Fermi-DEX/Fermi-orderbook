@@ -300,7 +300,7 @@ impl EventQueue {
         let slot = ((self.header.head() + self.header.count()) as usize) % self.buf.len();
         self.buf[slot] = value;
 
-        let count = self.header.count();
+        let _count = self.header.count();
 
         Ok(())
     }
