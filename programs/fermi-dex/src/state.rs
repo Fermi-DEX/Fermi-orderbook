@@ -3,7 +3,6 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount, Transfer, Approve},
 };
-//use solana_sdk::instruction::{AccountMeta, Instruction};
 
 use anchor_spl::token::accessor::authority;
 use enumflags2::{bitflags, BitFlags};
@@ -182,10 +181,7 @@ pub struct EventQueue {
 
 #[account]
 #[derive(Default)]
-//#[account(zero_copy)]
 pub struct Orders<const T: bool> {
-    //pub sorted: RefCell<Vec<Order>> 
-    //write sorted using refcell
     pub sorted: Vec<Order>,
 }
 
@@ -317,16 +313,13 @@ impl EventQueue {
             let _ = self.pop_front();
         }
 
-        //let slot = Some(peek_front_mut());
         let _ = self.pop_front();
 
         let slot = ((self.header.head() + self.header.count()) as usize) % self.buf.len();
         self.buf[slot] = value;
 
         let count = self.header.count();
-        //self.header.set_count(count + 1);
-
-        //self.header.incr_event_id();
+        
 
         Ok(())
     }
@@ -494,7 +487,6 @@ impl<'a> OrderBook<'a> {
 
             let remaining_order = match side {
                 Side::Bid => {
-                //let deposit_vault = pc_vault;
                 self.new_bid(
                     NewBidParams {
                         max_coin_qty,
@@ -636,8 +628,6 @@ pub struct InitializeMarket<'info> {
     )]
     pub event_q: AccountLoader<'info, EventQueue>,
 
-    //pub event_q: Box<Account<'info, EventQueue>>,
-
     #[account(mut)]
     pub authority: Signer<'info>,
 
@@ -682,7 +672,6 @@ pub struct OpenOrders {
 
 
 #[derive(Accounts)]
-//#[instruction(side: Side)]
 
 pub struct FinaliseMatch<'info>{
     #[account(
@@ -731,25 +720,20 @@ pub struct FinaliseMatch<'info>{
 
     #[account(
         mut,
-        //constraint = market.check_payer_mint(payer.mint, side) @ ErrorCodeCustom::WrongPayerMint,
         token::authority = authority,
     )]
     pub pcpayer: Account<'info, TokenAccount>,
 
     #[account(
         mut,
-        //constraint = market.check_payer_mint(payer.mint, side) @ ErrorCodeCustom::WrongPayerMint,
         token::authority = authority,
     )]
     pub coinpayer: Account<'info, TokenAccount>,
-    //pub event_q: Box<Account<'info, EventQueue>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    //#[account(mut)]
-    //pub authority_cpty: Account<'info, AccountInfo>,
-
+   
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -810,7 +794,6 @@ pub struct NewOrder<'info> {
     #[account(mut)]
     pub req_q: Box<Account<'info, RequestQueue>>,
     #[account(mut)]
-    //pub event_q: Box<Account<'info, EventQueue>>,
     pub event_q: AccountLoader<'info, EventQueue>,
 
     #[account(mut)]
@@ -819,59 +802,32 @@ pub struct NewOrder<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    //pub clock: Sysvar<'info, Clock>,
 
     pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
-//#[instruction(side: Side)]
 
 pub struct NewMatch<'info>{
-   /*  #[account(
-        seeds = [b"open-orders".as_ref(), market.key().as_ref(), authority.key().as_ref()],
-        bump,
-    )] */
+   
     #[account(mut)]
     pub open_orders_owner: Box<Account<'info, OpenOrders>>,
 
-    /*#[account(
-        seeds = [b"open-orders".as_ref(), market.key().as_ref(), authority_second.key().as_ref()],
-        bump,
-    )] */
     #[account(mut)]
     pub open_orders_counterparty: Box<Account<'info, OpenOrders>>,
-
 
    #[account(
       seeds = [b"market".as_ref(), coin_mint.key().as_ref(), pc_mint.key().as_ref()],
       bump,
     )] 
-   // #[account(mut)]
     pub market: Box<Account<'info, Market>>,
-    /*
-    #[account(
-        mut,
-        associated_token::mint = coin_mint,
-        associated_token::authority = market,
-    )]
-    pub coin_vault: Account<'info, TokenAccount>,
-*/
-    /*#[account(
-        mut,
-        associated_token::mint = pc_mint,
-        associated_token::authority = market,
-    )] */
+   
     #[account(mut)]
     pub pc_vault: Account<'info, TokenAccount>, 
 
     pub coin_mint: Account<'info, Mint>,
     pub pc_mint: Account<'info, Mint>,
-    /*
-    #[account(mut)]
-    pub bids: Box<Account<'info, Bids>>,
-    #[account(mut)]
-    pub asks: Box<Account<'info, Asks>>, */
+    
 
     #[account(mut)]
     pub req_q: Box<Account<'info, RequestQueue>>,
@@ -879,17 +835,11 @@ pub struct NewMatch<'info>{
     pub event_q: AccountLoader<'info, EventQueue>,
     pub authority: Signer<'info>,
 
-
-    /*#[account(mut)]
-    pub authority_second: Signer<'info>,*/
-
      /// CHECK: This account is only used for its public key in seeds and is not used for signing.
      pub authority_second: AccountInfo<'info>,
 
     #[account(
         mut,
-       // constraint = market.check_payer_mint(payer.mint, side) @ ErrorCodeCustom::WrongPayerMint,
-        //token::authority = authority_second,
     )]
     pub pcpayer: Account<'info, TokenAccount>,
  
@@ -907,17 +857,10 @@ pub struct NewMatch<'info>{
 
 #[derive(Accounts)]
 pub struct NewMatchAsk<'info>{
-    /*#[account(
-        seeds = [b"open-orders".as_ref(), market.key().as_ref(), authority.key().as_ref()],
-        bump,
-    )]*/
+   
     #[account(mut)]
     pub open_orders_owner: Box<Account<'info, OpenOrders>>,
 
-    /*#[account(
-        seeds = [b"open-orders".as_ref(), market.key().as_ref(), authority_second.key().as_ref()],
-        bump,
-    )] */
    #[account(mut)]
     pub open_orders_counterparty: Box<Account<'info, OpenOrders>>,
 
@@ -927,14 +870,7 @@ pub struct NewMatchAsk<'info>{
         bump,
     )]
     pub market: Box<Account<'info, Market>>,
-    /*
-    #[account(
-        mut,
-        associated_token::mint = coin_mint,
-        associated_token::authority = market,
-    )]
-    pub coin_vault: Account<'info, TokenAccount>,
-*/
+   
     #[account(
         mut,
         associated_token::mint = coin_mint,
@@ -944,11 +880,7 @@ pub struct NewMatchAsk<'info>{
 
     pub coin_mint: Account<'info, Mint>,
     pub pc_mint: Account<'info, Mint>,
-    /*
-    #[account(mut)]
-    pub bids: Box<Account<'info, Bids>>,
-    #[account(mut)]
-    pub asks: Box<Account<'info, Asks>>, */
+   
 
     #[account(mut)]
     pub req_q: Box<Account<'info, RequestQueue>>,
@@ -957,16 +889,11 @@ pub struct NewMatchAsk<'info>{
     pub authority: Signer<'info>,
 
 
-    //#[account(mut)]
-    //pub authority_second: Signer<'info>,
-
     /// CHECK: This account is only used for its public key in seeds and is not used for signing.
     pub authority_second: AccountInfo<'info>,
 
     #[account(
         mut,
-       // constraint = market.check_payer_mint(payer.mint, side) @ ErrorCodeCustom::WrongPayerMint,
-       // token::authority = authority_second,
     )]
     pub coinpayer: Account<'info, TokenAccount>,
  
@@ -992,7 +919,6 @@ pub struct DepositTokens<'info> {
     
     #[account(mut)]
     pub open_orders: Box<Account<'info, OpenOrders>>,
-    //pub system_program: Program<'info, System>,
     pub authority: Signer<'info>,
 
     pub token_program: Program<'info, Token>,

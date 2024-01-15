@@ -3,7 +3,6 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount, Transfer, Approve},
 };
-//use solana_sdk::instruction::{AccountMeta, Instruction};
 
 use anchor_spl::token::accessor::authority;
 use enumflags2::{bitflags, BitFlags};
@@ -82,7 +81,6 @@ impl Event {
 
     #[inline(always)]
     pub fn new(view: EventView) -> Self {
-        //let clock = Clock::get()?;
         let mut current_timestamp: u64 = 0;
         let clock = match Clock::get() {
             Ok(clock) => clock,
@@ -94,20 +92,7 @@ impl Event {
             }
         };
         let current_timestamp: u64 = clock.unix_timestamp as u64;
-        /* 
-        match clock {
-            Ok(clock_data) => {
-                // Access the unix_timestamp field
-                let current_timestamp = clock_data.unix_timestamp as u64;
-                // Use current_timestamp as needed
-                Ok(())
-            }
-            Err(program_error) => {
-                // Handle the error, for example, print an error message
-                msg!("Error getting clock data: {:?}", program_error);
-                Err(program_error)
-            }
-        } */
+
         //let current_timestamp= clock.unix_timestamp as u64;
         match view {
             EventView::Fill {
@@ -188,7 +173,6 @@ impl Event {
                 if maker {
                     flags |= EventFlag::Maker;
                 }
-                //let mut finalsed= true;
                 Event {
                     event_flags: flags.bits(),
                     owner_slot,
@@ -280,14 +264,7 @@ impl<'a> OrderBook<'a> {
                 )?;
                 None
             }
-            /*
-
-
-            RequestView::JitStruct { .. } => {
-                msg!("jit it!");
-                None
-            }
-            */
+            
         })
     }
 }
@@ -369,10 +346,7 @@ impl<'a> OrderBook<'a> {
                 msg!("event.order: {}", order.owner);
                 msg!("event.owner_slot: {}", order.owner_slot);
                 msg!("event.finalised: {}", "0");
-/*
-                event_q
-                    .push_back(out)
-                    .map_err(|_| error!(ErrorCodeCustom::QueueAlreadyFull))?; */
+
                 self.bids.insert(Order {
                     order_id,
                     qty: max_coin_qty,
@@ -427,15 +401,12 @@ impl<'a> OrderBook<'a> {
                 cpty: owner,
                 order_id_second: order_id,
             });
-            //let lenevents = event_q.len();
-            //let idx = lenevents +1;
+            
             
             //write maker side event to eventQ
             event_q.buf[idx as usize] = maker_fill;
             event_q.head +=1;
-             //   .push_back(maker_fill)
-             //   .map_err(|_| error!(ErrorCodeCustom::QueueAlreadyFull))?;
-
+             
                 msg!("event.idx: {}", idx);
                 msg!("event.side: {}", "Ask");
                 msg!("event.maker: {}", "true");
@@ -511,8 +482,7 @@ impl<'a> OrderBook<'a> {
             to_release.debit_native_pc(native_pc_paid);
             to_release.jit_data = jit_data;
 
-            // multiple possible counterparties
-            //if native_accum_fill_price > 0 {
+            
                 let taker_fill = Event::new(EventView::Fill {
                     side: Side::Bid,
                     maker: false,
@@ -542,14 +512,6 @@ impl<'a> OrderBook<'a> {
                 msg!("event.owner_slot: {}", owner_slot);
                 msg!("event.finalised: {}", "0");
 
-
-
-
-/*
-                event_q
-                    .push_back(taker_fill)
-                    .map_err(|_| ErrorCodeCustom::QueueAlreadyFull)?; */
-           // }
         }
 
         if !done {
@@ -680,10 +642,7 @@ impl<'a> OrderBook<'a> {
                 msg!("event.owner_slot: {}", order.owner_slot);
                 msg!("event.finalised: {}", "0");
 
-/*
-                event_q
-                    .push_back(out)
-                    .map_err(|_| error!(ErrorCodeCustom::QueueAlreadyFull))?;*/
+
                 self.asks.insert(Order {
                     order_id,
                     qty: unfilled_qty,
@@ -761,10 +720,6 @@ impl<'a> OrderBook<'a> {
 
 
 
-/*
-            event_q
-                .push_back(maker_fill)
-                .map_err(|_| error!(ErrorCodeCustom::QueueAlreadyFull))?;*/
 
             best_bid.qty -= trade_qty;
             unfilled_qty -= trade_qty;
@@ -797,19 +752,6 @@ impl<'a> OrderBook<'a> {
                 msg!("event.owner_slot: {}", best_bid.owner_slot);
                 msg!("event.finalised: {}", "0");
 
-
-                /*event_q
-                    .push_back(Event::new(EventView::Out {
-                        side: Side::Bid,
-                        release_funds: true,
-                        native_qty_unlocked: 0,
-                        native_qty_still_locked: 0,
-                        order_id: best_bid_id,
-                        owner: best_bid.owner,
-                        owner_slot: best_bid.owner_slot,
-                    }))
-                    .map_err(|_| error!(ErrorCodeCustom::QueueAlreadyFull))?;*/
-                //self.bids.delete(best_bid_id)?;
             }
 
             break false;
@@ -854,10 +796,7 @@ impl<'a> OrderBook<'a> {
 
 
 
-/*
-                event_q
-                    .push_back(taker_fill)
-                    .map_err(|_| error!(ErrorCodeCustom::QueueAlreadyFull))?;*/
+
             }
         }
 
@@ -898,10 +837,7 @@ impl<'a> OrderBook<'a> {
             msg!("event.owner: {}", owner);
             msg!("event.owner.slot: {}", owner_slot);
             msg!("event.finalised: {}", "0");
-/*
-            event_q
-                .push_back(out)
-                .map_err(|_| error!(ErrorCodeCustom::QueueAlreadyFull))?;*/
+
         }
 
         Ok(None)
@@ -949,8 +885,6 @@ impl<'a> OrderBook<'a> {
 
     pub fn cancel_order_bid(&mut self, side: bool, order_id: u128, owner: Pubkey) -> Result<()> {
        
-        //  pub fn remove_order_by_id_and_owner(&mut self, side: bool, order_id: u128, owner: Pubkey) -> Result<(), ErrorCodeCustom> {
-        //let orders = if side { &mut *self.bids } else { &mut *self.asks };
         let orders = &mut *self.bids;
         orders.delete(order_id);
 
@@ -960,15 +894,9 @@ impl<'a> OrderBook<'a> {
 
         pub fn cancel_order_ask(&mut self, side: bool, order_id: u128, owner: Pubkey) -> Result<()> {
        
-            //  pub fn remove_order_by_id_and_owner(&mut self, side: bool, order_id: u128, owner: Pubkey) -> Result<(), ErrorCodeCustom> {
-            //let orders = if side { &mut *self.bids } else { &mut *self.asks };
             let orders = &mut *self.asks;
             orders.delete(order_id);
     
-            //if let Some(leaf_node) = self.orders_mut(side).remove_by_key(order_id) {
-              //  } else {
-                //    self.orders_mut(side).insert_leaf(&leaf_node).unwrap();
-              //  }
                 Ok(())
             }
         
@@ -1082,10 +1010,7 @@ impl<'a> OrderBook<'a> {
         }
     
         pub fn remove_order(&mut self, slot: u8) -> Result<()> {
-            // check_assert!(slot < 128)?;
-            // check_assert!(!self.slot_is_free(slot))?;
-            //require!(self.slot_is_free(slot), ErrorCodeCustom::SlotIsNotFree);
-    
+            
             let slot_mask = 1u8 << slot;
             self.orders[slot as usize] = 0;
             self.free_slot_bits |= slot_mask;
@@ -1099,7 +1024,6 @@ impl<'a> OrderBook<'a> {
             if self.free_slot_bits == 0 {
                 self.remove_order(0)?;
             } 
-            //require!(self.free_slot_bits != 0, ErrorCodeCustom::TooManyOpenOrders);
             let slot = self.free_slot_bits.trailing_zeros() as u8;
             require!(self.slot_is_free(slot), ErrorCodeCustom::SlotIsNotFree);
             let slot_mask = 1u8 << slot;

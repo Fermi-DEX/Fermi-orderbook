@@ -1087,7 +1087,7 @@ pub fn finalise_matches_ask(
                 msg!("event2 orderid is {}", event2_orderid);
                 msg!("event2 orderidsecond is {}", event2_orderidsecond);
             
-                require!(event1.order_id_second == event2.order_id, Error);
+                require!(event1.order_id_second == event2.order_id, ErrorCodeCustom::BothEventsFinalised);
             
                 let events: Vec<Event> = vec![event1, event2];
                 let mut order_id_general: u128 = 0;
