@@ -1,7 +1,7 @@
-use anchor_lang::{prelude::*, accounts::account_info};
+use anchor_lang::{accounts::account_info, prelude::*};
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount, Transfer, Approve},
+    token::{Approve, Mint, Token, TokenAccount, Transfer},
 };
 
 use anchor_spl::token::accessor::authority;
@@ -9,10 +9,8 @@ use enumflags2::{bitflags, BitFlags};
 use resp;
 use std::cell::RefCell;
 
-
-use crate::utils2::*;
 use crate::errors::ErrorCodeCustom;
-
+use crate::utils2::*;
 
 #[account]
 #[derive(Default)]
@@ -49,7 +47,6 @@ pub enum RequestFlag {
     ImmediateOrCancel = 0x10,
     DecrementTakeOnSelfTrade = 0x20,
 }
-
 
 #[derive(Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct JitStruct {
@@ -97,7 +94,6 @@ impl RequestQueue {
     }
 }
 
-
 #[bitflags]
 #[repr(u8)]
 #[derive(Copy, Clone, AnchorSerialize, AnchorDeserialize)]
@@ -109,8 +105,6 @@ pub enum EventFlag {
     ReleaseFunds = 0x10,
     Finalise = 0x20,
 }
-
-
 
 pub enum EventView {
     Fill {
@@ -147,8 +141,6 @@ pub enum EventView {
         cpty: Pubkey,
     },
 }
-
-
 
 pub struct EventQueueIterator<'a> {
     pub queue: &'a EventQueue,
@@ -217,7 +209,6 @@ pub enum RequestView {
         expected_owner_slot: u8,
         expected_owner: Pubkey,
     },
-
 }
 
 pub struct OrderBook<'a> {
@@ -241,7 +232,6 @@ pub struct OrderRemaining {
     pub native_pc_qty_remaining: Option<u64>,
 }
 
-
 #[repr(packed)]
 #[zero_copy]
 pub struct Event {
@@ -256,9 +246,8 @@ pub struct Event {
     pub finalised: u8,
     pub order_id_second: u128,
     pub timestamp: u64, // block the order was filled in
-    // pub cpty: Pubkey, // Uncomment this if you want it to be public
+                        // pub cpty: Pubkey, // Uncomment this if you want it to be public
 }
-
 
 // User owner value to track cpty
 
@@ -285,17 +274,13 @@ impl EventQueueHeader {
     }
 }
 
-
-
-
 impl EventQueue {
     pub const MAX_SIZE: usize = EventQueueHeader::MAX_SIZE + 20 * Event::MAX_SIZE;
 
     #[inline]
     pub fn len(&self) -> u64 {
         return self.head;
-    } 
-       
+    }
 
     #[inline]
     pub fn full(&self) -> bool {
@@ -319,7 +304,6 @@ impl EventQueue {
         self.buf[slot] = value;
 
         let count = self.header.count();
-        
 
         Ok(())
     }
@@ -354,13 +338,7 @@ impl EventQueue {
 
         Ok(value)
     }
-
-
-   
-    }
-
-
-
+}
 
 impl Order {
     pub const MAX_SIZE: usize = 16;
@@ -373,7 +351,6 @@ impl Order {
         Order::price_from_order_id(self.order_id)
     }
 }
-
 
 impl<const T: bool> Orders<T> {
     pub const MAX_SIZE: usize = 8 + 4 + 32 * Order::MAX_SIZE;
@@ -432,8 +409,6 @@ impl<const T: bool> Orders<T> {
     }
 }
 
-
-
 macro_rules! impl_incr_method {
     ($method:ident, $var:ident) => {
         #[allow(unused)]
@@ -451,7 +426,6 @@ impl RequestProceeds {
     impl_incr_method!(debit_coin, coin_debit);
     impl_incr_method!(debit_native_pc, native_pc_debit);
 }
-
 
 impl<'a> OrderBook<'a> {
     pub fn new_order(
@@ -486,8 +460,7 @@ impl<'a> OrderBook<'a> {
             }
 
             let remaining_order = match side {
-                Side::Bid => {
-                self.new_bid(
+                Side::Bid => self.new_bid(
                     NewBidParams {
                         max_coin_qty,
                         native_pc_qty_locked: native_pc_qty_locked.unwrap(),
@@ -500,23 +473,20 @@ impl<'a> OrderBook<'a> {
                     },
                     event_q,
                     proceeds,
-                )},
-                Side::Ask => {
-                    
-                    self.new_ask(
-                        NewAskParams {
-                            max_qty: max_coin_qty,
-                            limit_price,
-                            order_id,
-                            owner,
-                            owner_slot,
-                            post_only,
-                            post_allowed,
-                        },
-                        event_q,
-                        proceeds,
-                    )
-                }
+                ),
+                Side::Ask => self.new_ask(
+                    NewAskParams {
+                        max_qty: max_coin_qty,
+                        limit_price,
+                        order_id,
+                        owner,
+                        owner_slot,
+                        post_only,
+                        post_allowed,
+                    },
+                    event_q,
+                    proceeds,
+                ),
             }?;
             if limit == 0 {
                 return Ok(remaining_order);
@@ -528,7 +498,6 @@ impl<'a> OrderBook<'a> {
                     native_pc_qty_locked = remaining_order.native_pc_qty_remaining;
                 }
                 None => return Ok(None),
-                
             };
         }
     }
@@ -561,8 +530,6 @@ pub struct CancelOrderParams {
     pub expected_owner: Pubkey,
     pub expected_owner_slot: u8,
 }
-    
-
 
 #[derive(Accounts)]
 pub struct InitializeMarket<'info> {
@@ -670,10 +637,9 @@ pub struct OpenOrders {
     pub orders: [u128; 8],
 }
 
-
 #[derive(Accounts)]
 
-pub struct FinaliseMatch<'info>{
+pub struct FinaliseMatch<'info> {
     #[account(
         seeds = [b"open-orders".as_ref(), market.key().as_ref(), authority.key().as_ref()],
         bump,
@@ -733,17 +699,12 @@ pub struct FinaliseMatch<'info>{
     #[account(mut)]
     pub authority: Signer<'info>,
 
-   
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 
     pub rent: Sysvar<'info, Rent>,
-
-
-
 }
-
 
 #[derive(Accounts)]
 #[instruction(side: Side)]
@@ -808,26 +769,24 @@ pub struct NewOrder<'info> {
 
 #[derive(Accounts)]
 
-pub struct NewMatch<'info>{
-   
+pub struct NewMatch<'info> {
     #[account(mut)]
     pub open_orders_owner: Box<Account<'info, OpenOrders>>,
 
     #[account(mut)]
     pub open_orders_counterparty: Box<Account<'info, OpenOrders>>,
 
-   #[account(
+    #[account(
       seeds = [b"market".as_ref(), coin_mint.key().as_ref(), pc_mint.key().as_ref()],
       bump,
-    )] 
+    )]
     pub market: Box<Account<'info, Market>>,
-   
+
     #[account(mut)]
-    pub pc_vault: Account<'info, TokenAccount>, 
+    pub pc_vault: Account<'info, TokenAccount>,
 
     pub coin_mint: Account<'info, Mint>,
     pub pc_mint: Account<'info, Mint>,
-    
 
     #[account(mut)]
     pub req_q: Box<Account<'info, RequestQueue>>,
@@ -835,14 +794,11 @@ pub struct NewMatch<'info>{
     pub event_q: AccountLoader<'info, EventQueue>,
     pub authority: Signer<'info>,
 
-     /// CHECK: This account is only used for its public key in seeds and is not used for signing.
-     pub authority_second: AccountInfo<'info>,
+    /// CHECK: This account is only used for its public key in seeds and is not used for signing.
+    pub authority_second: AccountInfo<'info>,
 
-    #[account(
-        mut,
-    )]
+    #[account(mut)]
     pub pcpayer: Account<'info, TokenAccount>,
- 
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
@@ -850,37 +806,31 @@ pub struct NewMatch<'info>{
 
     pub rent: Sysvar<'info, Rent>,
     pub clock: Sysvar<'info, Clock>,
-
-
-
 }
 
 #[derive(Accounts)]
-pub struct NewMatchAsk<'info>{
-   
+pub struct NewMatchAsk<'info> {
     #[account(mut)]
     pub open_orders_owner: Box<Account<'info, OpenOrders>>,
 
-   #[account(mut)]
+    #[account(mut)]
     pub open_orders_counterparty: Box<Account<'info, OpenOrders>>,
-
 
     #[account(
         seeds = [b"market".as_ref(), coin_mint.key().as_ref(), pc_mint.key().as_ref()],
         bump,
     )]
     pub market: Box<Account<'info, Market>>,
-   
+
     #[account(
         mut,
         associated_token::mint = coin_mint,
         associated_token::authority = market,
     )]
-    pub coin_vault: Account<'info, TokenAccount>, 
+    pub coin_vault: Account<'info, TokenAccount>,
 
     pub coin_mint: Account<'info, Mint>,
     pub pc_mint: Account<'info, Mint>,
-   
 
     #[account(mut)]
     pub req_q: Box<Account<'info, RequestQueue>>,
@@ -888,24 +838,17 @@ pub struct NewMatchAsk<'info>{
     pub event_q: AccountLoader<'info, EventQueue>,
     pub authority: Signer<'info>,
 
-
     /// CHECK: This account is only used for its public key in seeds and is not used for signing.
     pub authority_second: AccountInfo<'info>,
 
-    #[account(
-        mut,
-    )]
+    #[account(mut)]
     pub coinpayer: Account<'info, TokenAccount>,
- 
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 
     pub rent: Sysvar<'info, Rent>,
-
-
-
 }
 
 #[derive(Accounts)]
@@ -916,7 +859,7 @@ pub struct DepositTokens<'info> {
     pub payer: Account<'info, TokenAccount>,
     #[account(mut)]
     pub vault: Account<'info, TokenAccount>,
-    
+
     #[account(mut)]
     pub open_orders: Box<Account<'info, OpenOrders>>,
     pub authority: Signer<'info>,
@@ -971,7 +914,6 @@ pub struct WithdrawTokens<'info> {
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-
 }
 
 #[derive(Accounts)]

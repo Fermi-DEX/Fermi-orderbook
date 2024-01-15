@@ -1,14 +1,13 @@
-use anchor_lang::{prelude::*, accounts::account_info};
+use anchor_lang::{accounts::account_info, prelude::*};
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount, Transfer, Approve},
+    token::{Approve, Mint, Token, TokenAccount, Transfer},
 };
 //use solana_sdk::instruction::{AccountMeta, Instruction};
 
 use anchor_spl::token::accessor::authority;
 use enumflags2::{bitflags, BitFlags};
 use resp;
-
 
 #[error_code]
 pub enum ErrorCodeCustom {
@@ -71,15 +70,9 @@ pub enum ErrorCodeCustom {
     #[msg("WrongSideProvided")]
     WrongSide,
 
-
-
-
     #[msg("Error")]
     Error,
 
     #[msg("ApprovalFailed")]
     ApprovalFailed,
-    
-
-
 }

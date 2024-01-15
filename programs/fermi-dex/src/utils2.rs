@@ -1,7 +1,7 @@
-use anchor_lang::{prelude::*, accounts::account_info};
+use anchor_lang::{accounts::account_info, prelude::*};
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount, Transfer, Approve},
+    token::{Approve, Mint, Token, TokenAccount, Transfer},
 };
 
 use anchor_spl::token::accessor::authority;
@@ -20,10 +20,8 @@ use std::ops::Deref;
 pub use spl_token;
 pub use spl_token::ID;
 
-
-
-use crate::state::*;
 use crate::errors::*;
+use crate::state::*;
 
 use crate::errors::ErrorCodeCustom;
 
@@ -52,7 +50,9 @@ impl Market {
 impl EventView {
     pub fn side(&self) -> Side {
         match self {
-            &EventView::Fill { side, .. } | &EventView::Out { side, .. } |  &EventView::Finalise { side, .. } => side,
+            &EventView::Fill { side, .. }
+            | &EventView::Out { side, .. }
+            | &EventView::Finalise { side, .. } => side,
         }
     }
 }
@@ -88,7 +88,7 @@ impl Event {
                 // Handle the error, for example, print an error message
                 msg!("Error getting clock data: {:?}", program_error);
                 // Return a default Clock or handle the error in another way
-                Clock::default()  // You might need to implement the Default trait for Clock
+                Clock::default() // You might need to implement the Default trait for Clock
             }
         };
         let current_timestamp: u64 = clock.unix_timestamp as u64;
@@ -124,7 +124,7 @@ impl Event {
                     timestamp: current_timestamp,
                     //cpty,
                 }
-            },
+            }
 
             EventView::Out {
                 side,
@@ -155,8 +155,7 @@ impl Event {
                     timestamp: current_timestamp,
                     //cpty
                 }
-
-            },
+            }
 
             EventView::Finalise {
                 side,
@@ -182,15 +181,13 @@ impl Event {
                     order_id,
                     owner,
                     finalised,
-                    order_id_second:0,
+                    order_id_second: 0,
                     timestamp: current_timestamp,
                     //cpty,
                 }
+            }
         }
     }
-}
-
-    
 }
 
 impl<'a> OrderBook<'a> {
@@ -264,7 +261,6 @@ impl<'a> OrderBook<'a> {
                 )?;
                 None
             }
-            
         })
     }
 }
@@ -299,7 +295,10 @@ impl<'a> OrderBook<'a> {
         let max_pc_qty = native_pc_qty_locked / pc_lot_size;
 
         msg!("[OrderBook.new_bid] max_coin_qty: {}", max_coin_qty);
-        msg!("[OrderBook.new_bid] native_pc_qty_locked: {}", native_pc_qty_locked);
+        msg!(
+            "[OrderBook.new_bid] native_pc_qty_locked: {}",
+            native_pc_qty_locked
+        );
         msg!("[OrderBook.new_bid] limit_price: {}", limit_price.unwrap());
         msg!("[OrderBook.new_bid] order_id: {}", order_id);
         msg!("[OrderBook.new_bid] post_only: {}", post_only);
@@ -308,7 +307,7 @@ impl<'a> OrderBook<'a> {
         let mut coin_qty_remaining = max_coin_qty;
         let mut pc_qty_remaining = max_pc_qty;
         let mut jit_data = vec![];
-        
+
         msg!("bid inserted");
         let insert_result = self.bids.insert(Order {
             order_id,
@@ -335,12 +334,15 @@ impl<'a> OrderBook<'a> {
                 msg!("event id is {}", idx);
 
                 event_q.buf[idx as usize] = out;
-                event_q.head +=1;
+                event_q.head += 1;
 
                 msg!("event.idx: {}", idx);
                 msg!("event.side: {}", "Bid");
                 msg!("event.release_funds: {}", "true");
-                msg!("event.native_qty_unlocked: {}", order.qty * order.price() * pc_lot_size);
+                msg!(
+                    "event.native_qty_unlocked: {}",
+                    order.qty * order.price() * pc_lot_size
+                );
                 msg!("event.order_id: {}", order.order_id);
                 msg!("event.order_id_second: {}", 0);
                 msg!("event.order: {}", order.owner);
@@ -354,7 +356,7 @@ impl<'a> OrderBook<'a> {
                     owner_slot,
                 })?;
             }
-}
+        }
         let crossed;
         msg!("checking bid  for matches");
         let done = loop {
@@ -387,7 +389,7 @@ impl<'a> OrderBook<'a> {
             }
 
             let native_maker_pc_qty = trade_qty * trade_price * pc_lot_size;
-            
+
             let idx = event_q.head + 1;
             let maker_fill = Event::new(EventView::Fill {
                 side: Side::Ask,
@@ -401,25 +403,22 @@ impl<'a> OrderBook<'a> {
                 cpty: owner,
                 order_id_second: order_id,
             });
-            
-            
+
             //write maker side event to eventQ
             event_q.buf[idx as usize] = maker_fill;
-            event_q.head +=1;
-             
-                msg!("event.idx: {}", idx);
-                msg!("event.side: {}", "Ask");
-                msg!("event.maker: {}", "true");
-                msg!("event.native_qty_paid: {}", trade_qty * coin_lot_size);
-                msg!("event.native_qty_received: {}", native_maker_pc_qty);
-                msg!("event.order_id: {}", best_offer.order_id);
-                msg!("event.order_id_second: {}", order_id);
-                msg!("event.owner: {}", best_offer.owner);
-                msg!("owner_slot: {}", best_offer.owner_slot);
-                msg!("event.finalised: {}", "0");
-                msg!("event.cpty_orderid: {}", order_id);
+            event_q.head += 1;
 
-
+            msg!("event.idx: {}", idx);
+            msg!("event.side: {}", "Ask");
+            msg!("event.maker: {}", "true");
+            msg!("event.native_qty_paid: {}", trade_qty * coin_lot_size);
+            msg!("event.native_qty_received: {}", native_maker_pc_qty);
+            msg!("event.order_id: {}", best_offer.order_id);
+            msg!("event.order_id_second: {}", order_id);
+            msg!("event.owner: {}", best_offer.owner);
+            msg!("owner_slot: {}", best_offer.owner_slot);
+            msg!("event.finalised: {}", "0");
+            msg!("event.cpty_orderid: {}", order_id);
 
             best_offer.qty -= trade_qty;
             coin_qty_remaining -= trade_qty;
@@ -442,7 +441,7 @@ impl<'a> OrderBook<'a> {
                 let idx = event_q.head + 1;
                 msg!("event id is {}", idx);
                 event_q.buf[idx as usize] = event_out;
-                event_q.head +=1;
+                event_q.head += 1;
 
                 msg!("event.idx: {}", idx);
                 msg!("event.side: {}", "Ask");
@@ -454,9 +453,6 @@ impl<'a> OrderBook<'a> {
                 msg!("event.owner: {}", best_offer.owner);
                 msg!("event.owner_slot: {}", best_offer.owner_slot);
                 msg!("event.finalised: {}", "0");
-
-
-
             }
 
             break false;
@@ -465,14 +461,23 @@ impl<'a> OrderBook<'a> {
         msg!("[OrderBook.new_bid] crossed: {}", crossed);
         msg!("[OrderBook.new_bid] done: {}", done);
         msg!("[OrderBook.new_bid] countrerparty: {}", done);
-        msg!("[OrderBook.new_bid] coin_qty_remaining: {}", coin_qty_remaining);
+        msg!(
+            "[OrderBook.new_bid] coin_qty_remaining: {}",
+            coin_qty_remaining
+        );
         msg!("[OrderBook.new_bid] pc_qty_remaining: {}", pc_qty_remaining);
 
         let native_accum_fill_price = (max_pc_qty - pc_qty_remaining) * pc_lot_size;
         let native_pc_qty_remaining = native_pc_qty_locked - native_accum_fill_price;
 
-        msg!("[OrderBook.new_bid] native_accum_fill_price: {}", native_accum_fill_price);
-        msg!("[OrderBook.new_bid] native_pc_qty_remaining: {}", native_pc_qty_remaining);
+        msg!(
+            "[OrderBook.new_bid] native_accum_fill_price: {}",
+            native_accum_fill_price
+        );
+        msg!(
+            "[OrderBook.new_bid] native_pc_qty_remaining: {}",
+            native_pc_qty_remaining
+        );
 
         {
             let coin_lots_received = max_coin_qty - coin_qty_remaining;
@@ -482,36 +487,37 @@ impl<'a> OrderBook<'a> {
             to_release.debit_native_pc(native_pc_paid);
             to_release.jit_data = jit_data;
 
-            
-                let taker_fill = Event::new(EventView::Fill {
-                    side: Side::Bid,
-                    maker: false,
-                    native_qty_paid: native_pc_paid,
-                    native_qty_received: coin_lots_received * coin_lot_size,
-                    order_id,
-                    owner,
-                    owner_slot,
-                    finalised: 0,
-                    cpty: owner,
-                    order_id_second: 0,
-                });
-                let idx = event_q.head + 1;
-                msg!("event id is {}", idx);
+            let taker_fill = Event::new(EventView::Fill {
+                side: Side::Bid,
+                maker: false,
+                native_qty_paid: native_pc_paid,
+                native_qty_received: coin_lots_received * coin_lot_size,
+                order_id,
+                owner,
+                owner_slot,
+                finalised: 0,
+                cpty: owner,
+                order_id_second: 0,
+            });
+            let idx = event_q.head + 1;
+            msg!("event id is {}", idx);
 
-                event_q.buf[idx as usize] = taker_fill;
-                event_q.head +=1;
+            event_q.buf[idx as usize] = taker_fill;
+            event_q.head += 1;
 
-                msg!("event.idx: {}", idx);
-                msg!("event.side: {}", "Bid");
-                msg!("event.maker: {}", "false");
-                msg!("event.native_qty_paid: {}", native_pc_paid);
-                msg!("event.native_qty_received: {}", coin_lots_received * coin_lot_size);
-                msg!("event.order_id: {}", order_id);
-                msg!("event.order_id_second: {}", 0);
-                msg!("event.owner: {}", owner);
-                msg!("event.owner_slot: {}", owner_slot);
-                msg!("event.finalised: {}", "0");
-
+            msg!("event.idx: {}", idx);
+            msg!("event.side: {}", "Bid");
+            msg!("event.maker: {}", "false");
+            msg!("event.native_qty_paid: {}", native_pc_paid);
+            msg!(
+                "event.native_qty_received: {}",
+                coin_lots_received * coin_lot_size
+            );
+            msg!("event.order_id: {}", order_id);
+            msg!("event.order_id_second: {}", 0);
+            msg!("event.owner: {}", owner);
+            msg!("event.owner_slot: {}", owner_slot);
+            msg!("event.finalised: {}", "0");
         }
 
         if !done {
@@ -533,7 +539,10 @@ impl<'a> OrderBook<'a> {
         };
 
         msg!("[OrderBook.new_bid] coin_qty_to_post: {}", coin_qty_to_post);
-        msg!("[OrderBook.new_bid] pc_qty_to_keep_locked: {}", pc_qty_to_keep_locked);
+        msg!(
+            "[OrderBook.new_bid] pc_qty_to_keep_locked: {}",
+            pc_qty_to_keep_locked
+        );
 
         let out = {
             let native_qty_still_locked = pc_qty_to_keep_locked * pc_lot_size;
@@ -551,15 +560,15 @@ impl<'a> OrderBook<'a> {
                 finalised: 0,
             });
             let idx = event_q.head + 1;
-        msg!("event id is {}", idx);
-        event_q.buf[idx as usize] = outer;
-        event_q.head +=1;
+            msg!("event id is {}", idx);
+            event_q.buf[idx as usize] = outer;
+            event_q.head += 1;
         };
         let idx = event_q.head;
 
         let native_qty_still_locked = pc_qty_to_keep_locked * pc_lot_size;
-            let native_qty_unlocked = native_pc_qty_remaining - native_qty_still_locked;
-            to_release.unlock_native_pc(native_qty_unlocked);
+        let native_qty_unlocked = native_pc_qty_remaining - native_qty_still_locked;
+        to_release.unlock_native_pc(native_qty_unlocked);
 
         msg!("event.idx: {}", idx);
         msg!("event.side: {}", "Ask");
@@ -572,8 +581,6 @@ impl<'a> OrderBook<'a> {
         msg!("event.owner: {}", owner);
         msg!("owner_slot: {}", owner_slot);
         msg!("event.finalised: {}", "0");
-
-
 
         Ok(None)
     }
@@ -630,7 +637,7 @@ impl<'a> OrderBook<'a> {
                 let idx = event_q.head + 1;
                 msg!("idx is {}", idx);
                 event_q.buf[idx as usize] = out;
-                event_q.head +=1;
+                event_q.head += 1;
 
                 msg!("event.idx: {}", idx);
                 msg!("event.side: {}", "Ask");
@@ -641,7 +648,6 @@ impl<'a> OrderBook<'a> {
                 msg!("event.owner: {}", order.owner);
                 msg!("event.owner_slot: {}", order.owner_slot);
                 msg!("event.finalised: {}", "0");
-
 
                 self.asks.insert(Order {
                     order_id,
@@ -705,7 +711,7 @@ impl<'a> OrderBook<'a> {
             });
             let idx = event_q.head + 1;
             event_q.buf[idx as usize] = maker_fill;
-            event_q.head +=1;
+            event_q.head += 1;
             msg!("event.idx: {}", idx);
             msg!("event.side: {}", "Ask");
             msg!("event.maker: {}", "true");
@@ -717,9 +723,6 @@ impl<'a> OrderBook<'a> {
             msg!("event.owner_slot: {}", best_bid.owner_slot);
             msg!("event.finalised: {}", "0");
             msg!("event.cpty_orderid: {}", order_id);
-
-
-
 
             best_bid.qty -= trade_qty;
             unfilled_qty -= trade_qty;
@@ -739,7 +742,7 @@ impl<'a> OrderBook<'a> {
                 });
                 let idx = event_q.head + 1;
                 event_q.buf[idx as usize] = out;
-                event_q.head +=1;
+                event_q.head += 1;
 
                 msg!("event.idx: {}", idx);
                 msg!("event.side: {}", "Bid");
@@ -751,7 +754,6 @@ impl<'a> OrderBook<'a> {
                 msg!("event.owner: {}", best_bid.owner);
                 msg!("event.owner_slot: {}", best_bid.owner_slot);
                 msg!("event.finalised: {}", "0");
-
             }
 
             break false;
@@ -781,22 +783,21 @@ impl<'a> OrderBook<'a> {
                 });
                 let idx = event_q.head + 1;
                 event_q.buf[idx as usize] = taker_fill;
-                event_q.head +=1;
+                event_q.head += 1;
 
                 msg!("event.idx: {}", idx);
                 msg!("event.side: {}", "Ask");
                 msg!("event.maker: {}", "false");
-                msg!("event.native_qty_paid: {}", coin_lots_traded * coin_lot_size);
+                msg!(
+                    "event.native_qty_paid: {}",
+                    coin_lots_traded * coin_lot_size
+                );
                 msg!("event.native_qty_received: {}", net_taker_pc_qty);
                 msg!("event.order_id: {}", order_id);
                 msg!("event.order_id_second: {}", 0);
                 msg!("event.owner: {}", owner);
                 msg!("event.owner_slot: {}", owner_slot);
                 msg!("event.finalised: {}", "0");
-
-
-
-
             }
         }
 
@@ -810,7 +811,6 @@ impl<'a> OrderBook<'a> {
         }
 
         if post_allowed && !crossed && unfilled_qty > 0 {
-       
         } else {
             to_release.unlock_coin(unfilled_qty);
             let out = Event::new(EventView::Out {
@@ -825,25 +825,26 @@ impl<'a> OrderBook<'a> {
             });
             let idx = event_q.head + 1;
             event_q.buf[idx as usize] = out;
-            event_q.head +=1;
+            event_q.head += 1;
 
             msg!("event.idx: {}", idx);
             msg!("event.side: {}", "Ask");
             msg!("event.release_funds: {}", false);
-            msg!("event.native_qty_unlocked: {}", unfilled_qty * coin_lot_size);
+            msg!(
+                "event.native_qty_unlocked: {}",
+                unfilled_qty * coin_lot_size
+            );
             msg!("event.native_qty_still_locked: {}", "0");
             msg!("event.order_id: {}", order_id);
             msg!("event.order_id_second: {}", 0);
             msg!("event.owner: {}", owner);
             msg!("event.owner.slot: {}", owner_slot);
             msg!("event.finalised: {}", "0");
-
         }
 
         Ok(None)
     }
 }
-
 
 // Error handling is currently impossible for solana CPI's: https://solana.stackexchange.com/questions/4277/how-to-handle-error-of-invoked-signed-calls
 pub fn custom_token_transfer<'info>(
@@ -861,183 +862,179 @@ pub fn custom_token_transfer<'info>(
 
     match solana_program::program::invoke_signed(
         &ix,
-        &[cpi_ctx.accounts.from, cpi_ctx.accounts.to, cpi_ctx.accounts.authority],
+        &[
+            cpi_ctx.accounts.from,
+            cpi_ctx.accounts.to,
+            cpi_ctx.accounts.authority,
+        ],
         cpi_ctx.signer_seeds,
     ) {
         Ok(_) => Ok(()),
         Err(e) => {
             msg!("Transfer failed: {:?}", e);
             Err(e.into())
-        },
+        }
     }
 }
 
 impl<'a> OrderBook<'a> {
-    pub fn cancel_order(&mut self, params: CancelOrderParams, event_q: &mut EventQueue) -> Result<()> { 
+    pub fn cancel_order(
+        &mut self,
+        params: CancelOrderParams,
+        event_q: &mut EventQueue,
+    ) -> Result<()> {
         let CancelOrderParams {
             side,
             order_id,
             expected_owner,
             expected_owner_slot,
-        } = params; 
+        } = params;
         Ok(())
     }
 
     pub fn cancel_order_bid(&mut self, side: bool, order_id: u128, owner: Pubkey) -> Result<()> {
-       
         let orders = &mut *self.bids;
         orders.delete(order_id);
 
-        
-            Ok(())
-        }
-
-        pub fn cancel_order_ask(&mut self, side: bool, order_id: u128, owner: Pubkey) -> Result<()> {
-       
-            let orders = &mut *self.asks;
-            orders.delete(order_id);
-    
-                Ok(())
-            }
-        
-
-        
+        Ok(())
     }
 
+    pub fn cancel_order_ask(&mut self, side: bool, order_id: u128, owner: Pubkey) -> Result<()> {
+        let orders = &mut *self.asks;
+        orders.delete(order_id);
 
-    impl OpenOrders {
-        pub const MAX_SIZE: usize = 1 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1 + 8 * 16;
-    
-        pub fn init(&mut self, market: Pubkey, authority: Pubkey) -> Result<()> {
-            require!(!self.is_initialized, ErrorCodeCustom::AlreadyInitialized);
-    
-            self.is_initialized = true;
-            self.market = market;
-            self.authority = authority;
-            self.free_slot_bits = std::u8::MAX;
-    
-            Ok(())
-        }
-    
-        pub fn credit_unlocked_coin(&mut self, native_coin_amount: u64) {
-            self.native_coin_total = self
-                .native_coin_total
-                .checked_add(native_coin_amount)
-                .unwrap();
-            self.native_coin_free = self.native_coin_free.checked_add(native_coin_amount).unwrap();
-        }
+        Ok(())
+    }
+}
 
-        pub fn debit_locked_coin(&mut self, native_coin_amount: u64) {
-            self.native_coin_total = self
-                .native_coin_total
-                .checked_sub(native_coin_amount)
-                .unwrap();
-        }
+impl OpenOrders {
+    pub const MAX_SIZE: usize = 1 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1 + 8 * 16;
 
-        pub fn debit_locked_pc2(&mut self, native_pc_amount: u64) {
-            self.native_pc_total = self
-                .native_pc_total
-                .checked_sub(native_pc_amount)
-                .unwrap();
-        }
+    pub fn init(&mut self, market: Pubkey, authority: Pubkey) -> Result<()> {
+        require!(!self.is_initialized, ErrorCodeCustom::AlreadyInitialized);
 
-        pub fn debit_locked_pc(&mut self, native_pc_amount: u64) {
-            if let Some(new_total) = self.native_pc_total.checked_sub(native_pc_amount) {
-                self.native_pc_total = new_total;
-            } else {
-                msg!("current native_pc_total: {}", self.native_pc_total);
-                msg!("debit amount: {}", native_pc_amount);
-            }
-        }
-        
-    
-        pub fn credit_locked_coin(&mut self, native_coin_amount: u64) {
-            self.native_coin_total = self
-                .native_coin_total
-                .checked_add(native_coin_amount)
-                .unwrap();
-        }
-    
-        pub fn credit_unlocked_pc(&mut self, native_pc_amount: u64) {
-            self.native_pc_total = self.native_pc_total.checked_add(native_pc_amount).unwrap();
-            self.native_pc_free = self.native_pc_free.checked_add(native_pc_amount).unwrap();
-        }
-    
-        pub fn credit_locked_pc(&mut self, native_pc_amount: u64) {
-            self.native_pc_total = self.native_pc_total.checked_add(native_pc_amount).unwrap();
-        }
-    
-        pub fn lock_free_coin(&mut self, native_coin_amount: u64) {
-            self.native_coin_free = self
-                .native_coin_free
-                .checked_sub(native_coin_amount)
-                .unwrap();
-        }
-    
-       pub fn lock_free_pc(&mut self, native_pc_amount: u64) {
-            self.native_pc_free = self.native_pc_free.checked_sub(native_pc_amount).unwrap();
-        }
-    
-        pub fn unlock_coin(&mut self, native_coin_amount: u64) {
-            self.native_coin_free = self
-                .native_coin_free
-                .checked_add(native_coin_amount)
-                .unwrap();
-            assert!(self.native_coin_free <= self.native_coin_total);
-        }
-    
-        pub fn unlock_pc(&mut self, native_pc_amount: u64) {
-            self.native_pc_free = self.native_pc_free.checked_add(native_pc_amount).unwrap();
-            assert!(self.native_pc_free <= self.native_pc_total);
-        }
-    
-        pub fn slot_is_free(&self, slot: u8) -> bool {
-            let slot_mask = 1u8 << slot;
-            self.free_slot_bits & slot_mask != 0
-        }
-    
-        
-    
-        pub fn slot_side(&self, slot: u8) -> Option<Side> {
-            let slot_mask = 1u8 << slot;
-            if self.free_slot_bits & slot_mask != 0 {
-                None
-            } else if self.is_bid_bits & slot_mask != 0 {
-                Some(Side::Bid)
-            } else {
-                Some(Side::Ask)
-            }
-        }
-    
-        pub fn remove_order(&mut self, slot: u8) -> Result<()> {
-            
-            let slot_mask = 1u8 << slot;
-            self.orders[slot as usize] = 0;
-            self.free_slot_bits |= slot_mask;
-            self.is_bid_bits &= !slot_mask;
-    
-            Ok(())
-        }
-    
-        pub fn add_order(&mut self, id: u128, side: Side) -> Result<u8> {
-            //remove oldest order if openorders is full
-            if self.free_slot_bits == 0 {
-                self.remove_order(0)?;
-            } 
-            let slot = self.free_slot_bits.trailing_zeros() as u8;
-            require!(self.slot_is_free(slot), ErrorCodeCustom::SlotIsNotFree);
-            let slot_mask = 1u8 << slot;
-            self.free_slot_bits &= !slot_mask;
-            match side {
-                Side::Bid => {
-                    self.is_bid_bits |= slot_mask;
-                }
-                Side::Ask => {
-                    self.is_bid_bits &= !slot_mask;
-                }
-            };
-            self.orders[slot as usize] = id;
-            Ok(slot as u8)
+        self.is_initialized = true;
+        self.market = market;
+        self.authority = authority;
+        self.free_slot_bits = std::u8::MAX;
+
+        Ok(())
+    }
+
+    pub fn credit_unlocked_coin(&mut self, native_coin_amount: u64) {
+        self.native_coin_total = self
+            .native_coin_total
+            .checked_add(native_coin_amount)
+            .unwrap();
+        self.native_coin_free = self
+            .native_coin_free
+            .checked_add(native_coin_amount)
+            .unwrap();
+    }
+
+    pub fn debit_locked_coin(&mut self, native_coin_amount: u64) {
+        self.native_coin_total = self
+            .native_coin_total
+            .checked_sub(native_coin_amount)
+            .unwrap();
+    }
+
+    pub fn debit_locked_pc2(&mut self, native_pc_amount: u64) {
+        self.native_pc_total = self.native_pc_total.checked_sub(native_pc_amount).unwrap();
+    }
+
+    pub fn debit_locked_pc(&mut self, native_pc_amount: u64) {
+        if let Some(new_total) = self.native_pc_total.checked_sub(native_pc_amount) {
+            self.native_pc_total = new_total;
+        } else {
+            msg!("current native_pc_total: {}", self.native_pc_total);
+            msg!("debit amount: {}", native_pc_amount);
         }
     }
-    
+
+    pub fn credit_locked_coin(&mut self, native_coin_amount: u64) {
+        self.native_coin_total = self
+            .native_coin_total
+            .checked_add(native_coin_amount)
+            .unwrap();
+    }
+
+    pub fn credit_unlocked_pc(&mut self, native_pc_amount: u64) {
+        self.native_pc_total = self.native_pc_total.checked_add(native_pc_amount).unwrap();
+        self.native_pc_free = self.native_pc_free.checked_add(native_pc_amount).unwrap();
+    }
+
+    pub fn credit_locked_pc(&mut self, native_pc_amount: u64) {
+        self.native_pc_total = self.native_pc_total.checked_add(native_pc_amount).unwrap();
+    }
+
+    pub fn lock_free_coin(&mut self, native_coin_amount: u64) {
+        self.native_coin_free = self
+            .native_coin_free
+            .checked_sub(native_coin_amount)
+            .unwrap();
+    }
+
+    pub fn lock_free_pc(&mut self, native_pc_amount: u64) {
+        self.native_pc_free = self.native_pc_free.checked_sub(native_pc_amount).unwrap();
+    }
+
+    pub fn unlock_coin(&mut self, native_coin_amount: u64) {
+        self.native_coin_free = self
+            .native_coin_free
+            .checked_add(native_coin_amount)
+            .unwrap();
+        assert!(self.native_coin_free <= self.native_coin_total);
+    }
+
+    pub fn unlock_pc(&mut self, native_pc_amount: u64) {
+        self.native_pc_free = self.native_pc_free.checked_add(native_pc_amount).unwrap();
+        assert!(self.native_pc_free <= self.native_pc_total);
+    }
+
+    pub fn slot_is_free(&self, slot: u8) -> bool {
+        let slot_mask = 1u8 << slot;
+        self.free_slot_bits & slot_mask != 0
+    }
+
+    pub fn slot_side(&self, slot: u8) -> Option<Side> {
+        let slot_mask = 1u8 << slot;
+        if self.free_slot_bits & slot_mask != 0 {
+            None
+        } else if self.is_bid_bits & slot_mask != 0 {
+            Some(Side::Bid)
+        } else {
+            Some(Side::Ask)
+        }
+    }
+
+    pub fn remove_order(&mut self, slot: u8) -> Result<()> {
+        let slot_mask = 1u8 << slot;
+        self.orders[slot as usize] = 0;
+        self.free_slot_bits |= slot_mask;
+        self.is_bid_bits &= !slot_mask;
+
+        Ok(())
+    }
+
+    pub fn add_order(&mut self, id: u128, side: Side) -> Result<u8> {
+        //remove oldest order if openorders is full
+        if self.free_slot_bits == 0 {
+            self.remove_order(0)?;
+        }
+        let slot = self.free_slot_bits.trailing_zeros() as u8;
+        require!(self.slot_is_free(slot), ErrorCodeCustom::SlotIsNotFree);
+        let slot_mask = 1u8 << slot;
+        self.free_slot_bits &= !slot_mask;
+        match side {
+            Side::Bid => {
+                self.is_bid_bits |= slot_mask;
+            }
+            Side::Ask => {
+                self.is_bid_bits &= !slot_mask;
+            }
+        };
+        self.orders[slot as usize] = id;
+        Ok(slot as u8)
+    }
+}

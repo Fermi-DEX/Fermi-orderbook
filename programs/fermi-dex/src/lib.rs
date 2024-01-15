@@ -1,7 +1,7 @@
-use anchor_lang::{prelude::*, accounts::account_info};
+use anchor_lang::{accounts::account_info, prelude::*};
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount, Transfer, Approve},
+    token::{Approve, Mint, Token, TokenAccount, Transfer},
 };
 
 use anchor_spl::token::accessor::authority;
@@ -9,16 +9,14 @@ use enumflags2::{bitflags, BitFlags};
 use resp;
 use solana_program::clock::Clock;
 
-
-mod utils2;
-mod state;
 mod errors;
+mod state;
+mod utils2;
 
-use utils2::*;
-use state::*;
-use errors::*;
 use crate::errors::ErrorCodeCustom;
-
+use errors::*;
+use state::*;
+use utils2::*;
 
 //local
 declare_id!("3Ek56WB263s9WH7bhGtjpNkFk8V2UDXmvsKxDJ9RzmGR");
@@ -63,8 +61,11 @@ pub mod fermi_dex {
         let authority = ctx.accounts.authority.key();
 
         //check openorders owner
-         
-        require!(openorders.authority == authority, ErrorCodeCustom::OrderNotFound);
+
+        require!(
+            openorders.authority == authority,
+            ErrorCodeCustom::OrderNotFound
+        );
 
         //check the order is owned by this user
         let mut x = 0;
@@ -76,7 +77,7 @@ pub mod fermi_dex {
                 slot = i;
             }
         }
-        require!(x == 1, ErrorCodeCustom::OrderNotFound); 
+        require!(x == 1, ErrorCodeCustom::OrderNotFound);
 
         //remove order from orderbook
         let mut order_book = OrderBook {
@@ -93,16 +94,14 @@ pub mod fermi_dex {
         order_book.cancel_order_bid(true, order_id, expected_owner)?;
 
         //remove order from openorders
-        openorders.remove_order(slot.try_into().map_err(|_| ErrorCodeCustom::OrderNotFound)?)?;
-
+        openorders.remove_order(
+            slot.try_into()
+                .map_err(|_| ErrorCodeCustom::OrderNotFound)?,
+        )?;
 
         msg!("cancelled bid: {}", order_id);
         Ok(())
     }
-
-
-        
-    
 
     pub fn cancel_ask(
         ctx: Context<CancelOrder>,
@@ -114,9 +113,11 @@ pub mod fermi_dex {
         let openorders = &mut ctx.accounts.open_orders;
         let authority = ctx.accounts.authority.key();
 
-
         //check openorders owner
-        require!(openorders.authority == authority, ErrorCodeCustom::OrderNotFound);
+        require!(
+            openorders.authority == authority,
+            ErrorCodeCustom::OrderNotFound
+        );
 
         //check the order is owned by this user
         let mut x = 0;
@@ -128,7 +129,7 @@ pub mod fermi_dex {
                 slot = i;
             }
         }
-        require!(x == 1, ErrorCodeCustom::OrderNotFound); 
+        require!(x == 1, ErrorCodeCustom::OrderNotFound);
 
         let mut order_book = OrderBook {
             bids: &mut ctx.accounts.bids,
@@ -143,23 +144,21 @@ pub mod fermi_dex {
 
         order_book.cancel_order_ask(false, order_id, expected_owner)?;
 
-
         //remove order from openOrders
-        openorders.remove_order(slot.try_into().map_err(|_| ErrorCodeCustom::OrderNotFound)?)?;
+        openorders.remove_order(
+            slot.try_into()
+                .map_err(|_| ErrorCodeCustom::OrderNotFound)?,
+        )?;
 
         msg!("cancelled ask: {}", order_id);
-
 
         Ok(())
     }
 
-    pub fn deposit_pc_tokens(
-        ctx: Context<DepositTokens>,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn deposit_pc_tokens(ctx: Context<DepositTokens>, amount: u64) -> Result<()> {
         // Construct the transfer instruction
         msg!("Starting deposit_tokens function");
-  
+
         let token_program = &ctx.accounts.token_program;
 
         let transfer_ix = Transfer {
@@ -167,28 +166,25 @@ pub mod fermi_dex {
             to: ctx.accounts.vault.to_account_info(),
             authority: ctx.accounts.authority.to_account_info(),
         };
-        let cpi_ctx = CpiContext::new(token_program.to_account_info(), transfer_ix); 
+        let cpi_ctx = CpiContext::new(token_program.to_account_info(), transfer_ix);
         msg!("Transferred tokens!");
-        
+
         // Execute the transfer
         anchor_spl::token::transfer(cpi_ctx, amount).map_err(|err| match err {
             _ => error!(ErrorCodeCustom::TransferFailed),
-        })?; 
-        
-        
-        ctx.accounts.open_orders.native_pc_free = ctx.accounts
+        })?;
+
+        ctx.accounts.open_orders.native_pc_free = ctx
+            .accounts
             .open_orders
             .native_pc_free
             .checked_add(amount)
             .ok_or(ErrorCodeCustom::Error)?;
-        
+
         Ok(())
     }
 
-    pub fn deposit_coin_tokens(
-        ctx: Context<DepositTokens>,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn deposit_coin_tokens(ctx: Context<DepositTokens>, amount: u64) -> Result<()> {
         // Construct the transfer instruction
         let token_program = &ctx.accounts.token_program;
 
@@ -199,56 +195,54 @@ pub mod fermi_dex {
         };
         let cpi_ctx = CpiContext::new(token_program.to_account_info(), transfer_ix);
         msg!("Transferred tokens!");
-        
+
         // Execute the transfer
         anchor_spl::token::transfer(cpi_ctx, amount).map_err(|err| match err {
             _ => error!(ErrorCodeCustom::TransferFailed),
         })?;
-        
+
         // Credit the balance to openOrders
-        ctx.accounts.open_orders.native_coin_free = ctx.accounts
+        ctx.accounts.open_orders.native_coin_free = ctx
+            .accounts
             .open_orders
             .native_coin_free
             .checked_add(amount)
             .ok_or(ErrorCodeCustom::Error)?;
-        
+
         Ok(())
     }
 
-     pub fn withdraw_coins(
-        ctx: Context<WithdrawTokens>,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn withdraw_coins(ctx: Context<WithdrawTokens>, amount: u64) -> Result<()> {
         let program_id = ctx.program_id;
         let open_orders = &mut ctx.accounts.open_orders;
         let market = &mut ctx.accounts.market;
         let coin_vault = &ctx.accounts.coin_vault;
         let pc_vault = &ctx.accounts.pc_vault;
         let payer = &ctx.accounts.payer;
-        
+
         let authority = &ctx.accounts.authority;
         let token_program = &ctx.accounts.token_program;
         let coin_mint = &ctx.accounts.coin_mint;
         let pc_mint = &ctx.accounts.pc_mint;
         let (market_pda, bump_seed) = Pubkey::find_program_address(
             &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
-            &program_id
+            &program_id,
         );
 
         //Validation: owner of openorders is the authority
-        require!(open_orders.authority == authority.key(), ErrorCodeCustom::InvalidAuthority);
+        require!(
+            open_orders.authority == authority.key(),
+            ErrorCodeCustom::InvalidAuthority
+        );
 
-       //Validation of the user's openorders balance
+        //Validation of the user's openorders balance
         msg!("oo coin free : {}", open_orders.native_coin_free);
         msg!("oo owner owner {}", open_orders.authority);
         msg!("oo owner market {}", open_orders.market);
 
-
-
-
-       // Signing the transaction with the market PDA and bump seed.
+        // Signing the transaction with the market PDA and bump seed.
         let market_seed = b"market";
-        
+
         let coin_mint_key = coin_mint.key();
         let pc_mint_key = pc_mint.key();
 
@@ -260,64 +254,61 @@ pub mod fermi_dex {
         let seed_slices: [&[u8]; 4] = [market_seed, coin_mint_seed, pc_mint_seed, bump_seed_arr];
         let seeds: &[&[&[u8]]] = &[&seed_slices];
 
-
         let transfer_ix = Transfer {
             from: coin_vault.to_account_info(),
             to: payer.to_account_info(),
-            authority: market.to_account_info(),  // Using the market PDA as the authority.
+            authority: market.to_account_info(), // Using the market PDA as the authority.
         };
-    
+
         // Construct the context with the market PDA and bump seed.
-        let cpi_ctx = CpiContext::new_with_signer(
-            token_program.to_account_info(),
-            transfer_ix,
-            seeds,
-        );
-    
+        let cpi_ctx =
+            CpiContext::new_with_signer(token_program.to_account_info(), transfer_ix, seeds);
+
         anchor_spl::token::transfer(cpi_ctx, amount).map_err(|err| match err {
             _ => error!(ErrorCodeCustom::TransferFailed),
         })?;
         msg!("tokens withdrawn");
 
         // Reduce balance from user's OpenOrders account
-        open_orders.native_coin_free = open_orders.native_coin_free.checked_sub(amount).ok_or(ErrorCodeCustom::Error)?;
+        open_orders.native_coin_free = open_orders
+            .native_coin_free
+            .checked_sub(amount)
+            .ok_or(ErrorCodeCustom::Error)?;
 
         Ok(())
     }
 
-    pub fn withdraw_tokens(
-        ctx: Context<WithdrawTokens>,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn withdraw_tokens(ctx: Context<WithdrawTokens>, amount: u64) -> Result<()> {
         let program_id = ctx.program_id;
         let open_orders = &mut ctx.accounts.open_orders;
         let market = &mut ctx.accounts.market;
         let coin_vault = &ctx.accounts.coin_vault;
         let pc_vault = &ctx.accounts.pc_vault;
         let payer = &ctx.accounts.payer;
-        
+
         let authority = &ctx.accounts.authority;
         let token_program = &ctx.accounts.token_program;
         let coin_mint = &ctx.accounts.coin_mint;
         let pc_mint = &ctx.accounts.pc_mint;
         let (market_pda, bump_seed) = Pubkey::find_program_address(
             &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
-            &program_id
+            &program_id,
         );
 
         // Validation: owner of openorders is the authority
-        require!(open_orders.authority == authority.key(), ErrorCodeCustom::InvalidAuthority);
+        require!(
+            open_orders.authority == authority.key(),
+            ErrorCodeCustom::InvalidAuthority
+        );
 
         // Validation of the user's openorders balance
         msg!("oo owner owner {}", open_orders.authority);
         msg!("oo owner market {}", open_orders.market);
         msg!("oo pc free : {}", open_orders.native_pc_free);
 
-       
-
-       // Signing the transaction with the market PDA and bump seed.
+        // Signing the transaction with the market PDA and bump seed.
         let market_seed = b"market";
-        
+
         let coin_mint_key = coin_mint.key();
         let pc_mint_key = pc_mint.key();
 
@@ -332,30 +323,26 @@ pub mod fermi_dex {
         let transfer_ix = Transfer {
             from: pc_vault.to_account_info(),
             to: payer.to_account_info(),
-            authority: market.to_account_info(),  // Using the market PDA as the authority.
+            authority: market.to_account_info(), // Using the market PDA as the authority.
         };
-    
+
         // Construct the context with the market PDA and bump seed.
-        let cpi_ctx = CpiContext::new_with_signer(
-            token_program.to_account_info(),
-            transfer_ix,
-            seeds,
-        );
-    
+        let cpi_ctx =
+            CpiContext::new_with_signer(token_program.to_account_info(), transfer_ix, seeds);
+
         anchor_spl::token::transfer(cpi_ctx, amount).map_err(|err| match err {
             _ => error!(ErrorCodeCustom::TransferFailed),
         })?;
         msg!("tokens withdrawn");
 
         // Reduce balance from user's OpenOrders account
-        open_orders.native_pc_free = open_orders.native_pc_free.checked_sub(amount).ok_or(ErrorCodeCustom::Error)?;
+        open_orders.native_pc_free = open_orders
+            .native_pc_free
+            .checked_sub(amount)
+            .ok_or(ErrorCodeCustom::Error)?;
 
         Ok(())
     }
-
-
-
-
 
     pub fn new_order(
         ctx: Context<NewOrder>,
@@ -378,7 +365,6 @@ pub mod fermi_dex {
         let token_program = &ctx.accounts.token_program;
         let coin_mint = &ctx.accounts.coin_mint;
         let pc_mint = &ctx.accounts.pc_mint;
-
 
         if !open_orders.is_initialized {
             open_orders.init(market.key(), authority.key())?;
@@ -404,14 +390,13 @@ pub mod fermi_dex {
                 let lock_qty_native = max_native_pc_qty
                     .checked_mul(market.pc_lot_size)
                     .ok_or(error!(ErrorCodeCustom::InsufficientFunds))?;
-                ;
                 native_pc_qty_locked = Some(lock_qty_native);
                 let free_qty_to_lock = lock_qty_native.min(open_orders.native_pc_free);
                 let total_deposit_amount = lock_qty_native - free_qty_to_lock;
                 deposit_amount = total_deposit_amount; //for test with matching, L1044
                 deposit_vault = pc_vault;
                 cpty_vault = coin_vault;
-                
+
                 market.pc_deposits_total = market
                     .pc_deposits_total
                     .checked_add(deposit_amount)
@@ -427,7 +412,7 @@ pub mod fermi_dex {
                 deposit_amount = total_deposit_amount; //for test with matching, L1044
                 deposit_vault = coin_vault;
                 cpty_vault = pc_vault;
-               
+
                 market.coin_deposits_total = market
                     .coin_deposits_total
                     .checked_add(deposit_amount)
@@ -466,7 +451,6 @@ pub mod fermi_dex {
         order_book.process_request(&request, &mut event_q.as_mut().unwrap(), &mut proceeds)?;
         msg!("request processed");
         
-
         {
             let coin_lot_size = market.coin_lot_size;
 
@@ -485,11 +469,7 @@ pub mod fermi_dex {
             let native_coin_credit = coin_credit.checked_mul(coin_lot_size).unwrap();
             let native_coin_debit = coin_debit.checked_mul(coin_lot_size).unwrap();
 
-          
-
             let others = jit_data;
-            
-
 
             msg!("going to loop!");
             for p in others {
@@ -500,10 +480,8 @@ pub mod fermi_dex {
                 let mut deposits = p.native_qty_paid;
                 msg!("owner qty {}", owner_order);
                 msg!("dep {}", deposits);
-
             }
-
-        }    
+        }
         let matched_amount_pc = proceeds.native_pc_credit;
         let matched_amount_coin = proceeds.coin_credit;
 
@@ -519,13 +497,13 @@ pub mod fermi_dex {
             };
             let approve_cpi_ctx = CpiContext::new(token_program.to_account_info(), approve_ix);
             anchor_spl::token::approve(approve_cpi_ctx, deposit_amount).map_err(|err| {
-            msg!("Failed to approve tokens: {:?}", err);
-            ErrorCodeCustom::ApprovalFailed // Use the correct error code
-                })?;
-        }    
+                msg!("Failed to approve tokens: {:?}", err);
+                ErrorCodeCustom::ApprovalFailed // Use the correct error code
+            })?;
+        }
         msg!("Approval successful for {} tokens", deposit_amount);
 
-            // Calculate 1% of the deposit_amount
+        // Calculate 1% of the deposit_amount
         let transfer_fraction = 0.01; // 1%
         let transfer_amount = (deposit_amount as f64 * transfer_fraction) as u64;
 
@@ -537,10 +515,13 @@ pub mod fermi_dex {
                 to: deposit_vault.to_account_info(), // This is who you're giving permission to
                 authority: authority.to_account_info(), // The authority of the 'to' account
             };
-        
+
             // Create the CPI context for the approve instruction
             let transfer_cpi_ctx = CpiContext::new(token_program.to_account_info(), transfer_ix);
-            msg!("Tokens transferred as Margin later spending: {}", transfer_amount);
+            msg!(
+                "Tokens transferred as Margin later spending: {}",
+                transfer_amount
+            );
 
             // Update openorders balances.
             match side {
@@ -556,21 +537,12 @@ pub mod fermi_dex {
                 msg!("Failed to transfer tokens: {:?}", err);
                 ErrorCodeCustom::TransferFailed // Replace with your actual error code
             })?;
-            
-
-
         }
-        
-        
-        
-        
+
         msg!("matched amount {}", matched_amount_coin);
-       
 
-
-           Ok(())
+        Ok(())
     }
-
 
     //Checklist for cancel with penalty
     // 1. Check that the mandated delay period has been exceeded.
@@ -584,14 +556,13 @@ pub mod fermi_dex {
         side: Side,
         event_slot1: u8,
         event_slot2: u8,
-        
     ) -> Result<()> {
         let open_orders_bidder = &mut ctx.accounts.open_orders_bidder;
         let open_orders_asker = &mut ctx.accounts.open_orders_asker;
         let event_q = &mut ctx.accounts.event_q.load_mut()?;
         let event1: Event = event_q.buf[usize::from(event_slot1)];
         let event2: Event = event_q.buf[usize::from(event_slot2)];
-        
+
         // require the mandated delay period has been exceeded
         let clock = Clock::get()?;
         let current_timestamp = clock.unix_timestamp as u64;
@@ -603,43 +574,55 @@ pub mod fermi_dex {
         );
 
         //Verify that the events are a match.
-        require!(event1.order_id_second == event2.order_id || event2.order_id_second == event1.order_id, ErrorCodeCustom::Error);
+        require!(
+            event1.order_id_second == event2.order_id || event2.order_id_second == event1.order_id,
+            ErrorCodeCustom::Error
+        );
 
         // verify that the events have not already been finalized
-        require!(event1.finalised == 0 || event2.finalised == 0, ErrorCodeCustom::EventFinalised);
+        require!(
+            event1.finalised == 0 || event2.finalised == 0,
+            ErrorCodeCustom::EventFinalised
+        );
 
         // Verify openorders specified match the events.
         msg!("event1 owner is {}", event1.owner);
         msg!("openorders bidder is {}", open_orders_bidder.key());
         msg!("event2 owner is {}", event2.owner);
         msg!("openorders asker is {}", open_orders_asker.key());
-        require!(open_orders_bidder.key() == event1.owner || open_orders_asker.key() == event1.owner, ErrorCodeCustom::InvalidAuthority);
-       
+        require!(
+            open_orders_bidder.key() == event1.owner || open_orders_asker.key() == event1.owner,
+            ErrorCodeCustom::InvalidAuthority
+        );
+
         //verify counterparty
-        require!(open_orders_asker.key() == event2.owner || open_orders_bidder.key() == event2.owner, ErrorCodeCustom::InvalidAuthority);
-        
-        match side{
+        require!(
+            open_orders_asker.key() == event2.owner || open_orders_bidder.key() == event2.owner,
+            ErrorCodeCustom::InvalidAuthority
+        );
+
+        match side {
             Side::Bid => {
-
-                
                 if open_orders_bidder.key() == event1.owner {
-                // this ensures that a party cannot be penalised if they've already supplied capital.
-                require!(event1.finalised == 0, ErrorCodeCustom::SideAlreadyFinalised);
+                    // this ensures that a party cannot be penalised if they've already supplied capital.
+                    require!(event1.finalised == 0, ErrorCodeCustom::SideAlreadyFinalised);
 
-                // Calculate the penalty amount (1% of deposit_amount)    
-                let deposit_amount = event1.native_qty_paid;
-                let penalty_amount = deposit_amount / 100;
+                    // Calculate the penalty amount (1% of deposit_amount)
+                    let deposit_amount = event1.native_qty_paid;
+                    let penalty_amount = deposit_amount / 100;
 
-                // Deduct the penalty from the bidder's deposit
-                open_orders_bidder.debit_locked_pc(penalty_amount);
-        
-                // Add the penalty amount to the asker's open order balance
-                open_orders_asker.credit_unlocked_pc(penalty_amount);
-        
-                msg!("Penalty of {} PC Tokens transferred from bidder to asker", penalty_amount);
+                    // Deduct the penalty from the bidder's deposit
+                    open_orders_bidder.debit_locked_pc(penalty_amount);
 
-                
-                //If asker has finalized bid, free up their tokens deposited
+                    // Add the penalty amount to the asker's open order balance
+                    open_orders_asker.credit_unlocked_pc(penalty_amount);
+
+                    msg!(
+                        "Penalty of {} PC Tokens transferred from bidder to asker",
+                        penalty_amount
+                    );
+
+                    //If asker has finalized bid, free up their tokens deposited
                     if event2.finalised == 1 {
                         let asker_deposit_amount = event2.native_qty_paid;
                         open_orders_asker.unlock_coin(asker_deposit_amount);
@@ -648,20 +631,22 @@ pub mod fermi_dex {
                         let asker_marginal_deposit = event2.native_qty_paid / 100;
                         open_orders_asker.unlock_coin(asker_marginal_deposit);
                     }
-                }
-                else {
+                } else {
                     require!(event2.finalised == 0, ErrorCodeCustom::SideAlreadyFinalised);
                     let deposit_amount = event2.native_qty_paid;
                     let penalty_amount = deposit_amount / 100;
-    
+
                     // Deduct the penalty from the bidder's deposit
                     open_orders_asker.debit_locked_pc(penalty_amount);
-            
+
                     // Add the penalty amount to the asker's open order balance
                     open_orders_bidder.credit_unlocked_pc(penalty_amount);
-            
-                    msg!("Penalty of {} PC Tokens transferred from bidder to asker", penalty_amount);
-    
+
+                    msg!(
+                        "Penalty of {} PC Tokens transferred from bidder to asker",
+                        penalty_amount
+                    );
+
                     // free up locked funds for honest counterparty
                     let asker_marginal_deposit = event1.native_qty_released;
                     open_orders_bidder.unlock_coin(asker_marginal_deposit);
@@ -675,7 +660,6 @@ pub mod fermi_dex {
                         open_orders_bidder.unlock_coin(asker_marginal_deposit);
                     }
                 }
-
             }
             Side::Ask => {
                 //verify event2 is not already finalized
@@ -688,11 +672,14 @@ pub mod fermi_dex {
 
                     // Deduct the penalty from the asker's deposit
                     open_orders_asker.debit_locked_coin(penalty_amount);
-            
+
                     // Add the penalty amount to the bidder's open order balance
                     open_orders_bidder.credit_unlocked_coin(penalty_amount);
-            
-                    msg!("Penalty of {} coins transferred from asker to bidder", penalty_amount);
+
+                    msg!(
+                        "Penalty of {} coins transferred from asker to bidder",
+                        penalty_amount
+                    );
 
                     // if bidder has finalized bid, free up their tokens deposited
                     if event1.finalised == 1 {
@@ -703,37 +690,35 @@ pub mod fermi_dex {
                         let bidder_marginal_deposit = event1.native_qty_paid / 100;
                         open_orders_bidder.unlock_pc(bidder_marginal_deposit);
                     }
-
-            }
-            else {
-                require!(event1.finalised == 0, ErrorCodeCustom::SideAlreadyFinalised);
-
-                let deposit_amount = event1.native_qty_paid;
-                let penalty_amount = deposit_amount / 100;
-
-                // Deduct the penalty from the asker's deposit
-                open_orders_bidder.debit_locked_coin(penalty_amount);
-        
-                // Add the penalty amount to the bidder's open order balance
-                open_orders_asker.credit_unlocked_coin(penalty_amount);
-        
-                msg!("Penalty of {} coins transferred from asker to bidder", penalty_amount);
-
-                //if bidder has finalized bid, free up their tokens deposited
-                if event2.finalised == 1 {
-                    let bidder_deposit_amount = event2.native_qty_released;
-                    open_orders_asker.unlock_pc(bidder_deposit_amount);
                 } else {
-                    // free up margin locked funds for honest counterparty
-                    let bidder_marginal_deposit = event2.native_qty_released / 100;
-                    open_orders_asker.unlock_pc(bidder_marginal_deposit);
+                    require!(event1.finalised == 0, ErrorCodeCustom::SideAlreadyFinalised);
+
+                    let deposit_amount = event1.native_qty_paid;
+                    let penalty_amount = deposit_amount / 100;
+
+                    // Deduct the penalty from the asker's deposit
+                    open_orders_bidder.debit_locked_coin(penalty_amount);
+
+                    // Add the penalty amount to the bidder's open order balance
+                    open_orders_asker.credit_unlocked_coin(penalty_amount);
+
+                    msg!(
+                        "Penalty of {} coins transferred from asker to bidder",
+                        penalty_amount
+                    );
+
+                    //if bidder has finalized bid, free up their tokens deposited
+                    if event2.finalised == 1 {
+                        let bidder_deposit_amount = event2.native_qty_released;
+                        open_orders_asker.unlock_pc(bidder_deposit_amount);
+                    } else {
+                        // free up margin locked funds for honest counterparty
+                        let bidder_marginal_deposit = event2.native_qty_released / 100;
+                        open_orders_asker.unlock_pc(bidder_marginal_deposit);
+                    }
                 }
-
-
             }
-
-        } 
-    }
+        }
 
         //replace events with finalised = 2
         let fin: u8 = 2;
@@ -741,7 +726,7 @@ pub mod fermi_dex {
         let bidder_fill = Event::new(EventView::Finalise {
             side: Side::Ask,
             maker: true,
-            native_qty_paid:  event1.native_qty_paid,
+            native_qty_paid: event1.native_qty_paid,
             native_qty_received: event1.native_qty_released,
             order_id: event1.order_id,
             owner: event1.owner,
@@ -756,7 +741,7 @@ pub mod fermi_dex {
         let asker_fill = Event::new(EventView::Finalise {
             side: Side::Ask,
             maker: true,
-            native_qty_paid:  event2.native_qty_paid,
+            native_qty_paid: event2.native_qty_paid,
             native_qty_received: event2.native_qty_released,
             order_id: event2.order_id,
             owner: event2.owner,
@@ -768,499 +753,493 @@ pub mod fermi_dex {
         event_q.buf[idx as usize] = asker_fill;
 
         Ok(())
-    } 
-    
-       
+    }
+
     pub fn finalise_matches_bid(
-                ctx: Context<NewMatch>,
-                event1_slot: u8,
-                event2_slot: u8,
-            ) -> Result<()> {
-                let program_id = ctx.program_id;
-                let open_orders_auth = &mut ctx.accounts.open_orders_owner;
-                let open_orders_cpty = &mut ctx.accounts.open_orders_counterparty;
-                let market = &ctx.accounts.market;
-                let pc_vault = &ctx.accounts.pc_vault;
-                let req_q = &mut ctx.accounts.req_q;
-                let event_q = &mut ctx.accounts.event_q.load_mut()?;
-                let authority = &ctx.accounts.authority;
-                let token_program = &ctx.accounts.token_program;
-                let coin_mint = &ctx.accounts.coin_mint;
-                let pc_mint = &ctx.accounts.pc_mint;
-                let payerpc = &ctx.accounts.pcpayer;
-            
-                let event1: Event = event_q.buf[usize::from(event1_slot)];
-                let event2: Event = event_q.buf[usize::from(event2_slot)];
-            
-                let event1_orderid = event1.order_id;
-                let event2_orderid = event2.order_id;
-                let event1_orderidsecond = event1.order_id_second;
-                let event2_orderidsecond = event2.order_id_second;
-            
-                msg!("event1 orderid is {}", event1_orderid);
-                msg!("event1 orderidsecond is {}", event1_orderidsecond);
-                msg!("event2 orderid is {}", event2_orderid);
-                msg!("event2 orderidsecond is {}", event2_orderidsecond);
-            
-                require!(event1.order_id_second == event2.order_id, ErrorCodeCustom::Error);
-            
-                let events: Vec<Event> = vec![event1, event2];
-                let mut order_id_general: u128 = 0;
-                let mut first_event_done: bool = false;
-                let mut eventBidFinalised: bool = false;
-                let mut eventAskFinalised: bool = false;
+        ctx: Context<NewMatch>,
+        event1_slot: u8,
+        event2_slot: u8,
+    ) -> Result<()> {
+        let program_id = ctx.program_id;
+        let open_orders_auth = &mut ctx.accounts.open_orders_owner;
+        let open_orders_cpty = &mut ctx.accounts.open_orders_counterparty;
+        let market = &ctx.accounts.market;
+        let pc_vault = &ctx.accounts.pc_vault;
+        let req_q = &mut ctx.accounts.req_q;
+        let event_q = &mut ctx.accounts.event_q.load_mut()?;
+        let authority = &ctx.accounts.authority;
+        let token_program = &ctx.accounts.token_program;
+        let coin_mint = &ctx.accounts.coin_mint;
+        let pc_mint = &ctx.accounts.pc_mint;
+        let payerpc = &ctx.accounts.pcpayer;
 
-                //validation
-                require!(event1.finalised== 0 || event2.finalised == 0, ErrorCodeCustom::BothEventsFinalised);
-            
-                
-                for (index, parsed_event) in events.iter().enumerate() {
-                   
-                    let sider; // u8 for side
-                    match BitFlags::<EventFlag>::from_bits(parsed_event.event_flags) {
-                        Ok(flags) => {
-                            let side = EventFlag::flags_to_side(flags);
-                            msg!("The side derived from parsed_event.event_flags is: {:?}", side);
-                        },
-                        Err(_) => {
-                            msg!("Error: Invalid flags detected: {:?}", parsed_event.event_flags);
-                        }
-                    }
-                    
-                    
-                    let flags = BitFlags::<EventFlag>::from_bits(parsed_event.event_flags).unwrap_or(BitFlags::empty());
+        let event1: Event = event_q.buf[usize::from(event1_slot)];
+        let event2: Event = event_q.buf[usize::from(event2_slot)];
 
+        let event1_orderid = event1.order_id;
+        let event2_orderid = event2.order_id;
+        let event1_orderidsecond = event1.order_id_second;
+        let event2_orderidsecond = event2.order_id_second;
+
+        msg!("event1 orderid is {}", event1_orderid);
+        msg!("event1 orderidsecond is {}", event1_orderidsecond);
+        msg!("event2 orderid is {}", event2_orderid);
+        msg!("event2 orderidsecond is {}", event2_orderidsecond);
+
+        require!(
+            event1.order_id_second == event2.order_id,
+            ErrorCodeCustom::Error
+        );
+
+        let events: Vec<Event> = vec![event1, event2];
+        let mut order_id_general: u128 = 0;
+        let mut first_event_done: bool = false;
+        let mut eventBidFinalised: bool = false;
+        let mut eventAskFinalised: bool = false;
+
+        //validation
+        require!(
+            event1.finalised == 0 || event2.finalised == 0,
+            ErrorCodeCustom::BothEventsFinalised
+        );
+
+        for (index, parsed_event) in events.iter().enumerate() {
+            let sider; // u8 for side
+            match BitFlags::<EventFlag>::from_bits(parsed_event.event_flags) {
+                Ok(flags) => {
                     let side = EventFlag::flags_to_side(flags);
-                    if side == Side::Bid {
-                        sider = 1;
+                    msg!(
+                        "The side derived from parsed_event.event_flags is: {:?}",
+                        side
+                    );
+                }
+                Err(_) => {
+                    msg!(
+                        "Error: Invalid flags detected: {:?}",
+                        parsed_event.event_flags
+                    );
+                }
+            }
+
+            let flags = BitFlags::<EventFlag>::from_bits(parsed_event.event_flags)
+                .unwrap_or(BitFlags::empty());
+
+            let side = EventFlag::flags_to_side(flags);
+            if side == Side::Bid {
+                sider = 1;
+            } else {
+                sider = 2;
+            }
+            msg!("side is {}", sider);
+
+            if sider == 1 {
+                let mut qty_pc = parsed_event.native_qty_paid;
+                let mut qty_coin = parsed_event.native_qty_released;
+                let mut available_funds = open_orders_auth.native_pc_total;
+                msg!("the available funds is {}", available_funds);
+                msg!("the required funds are {}", qty_pc);
+
+                let mut deposit_amount = qty_pc / (market.pc_lot_size * 10);
+                msg!("Deposit amt {}", deposit_amount);
+                let mut cpty_deposit_amt = qty_coin;
+                let mut deposit_vault = pc_vault;
+
+                if deposit_amount > 0 {
+                    // Derive the market's PDA and bump seed.
+                    let (market_pda, bump_seed) = Pubkey::find_program_address(
+                        &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
+                        &program_id,
+                    );
+
+                    let market_seed = b"market";
+
+                    let coin_mint_key = coin_mint.key();
+                    let pc_mint_key = pc_mint.key();
+
+                    let coin_mint_seed = coin_mint_key.as_ref();
+                    let pc_mint_seed = pc_mint_key.as_ref();
+
+                    let bump_seed_arr: &[u8] = &[bump_seed];
+
+                    let seed_slices: [&[u8]; 4] =
+                        [market_seed, coin_mint_seed, pc_mint_seed, bump_seed_arr];
+                    let seeds: &[&[&[u8]]] = &[&seed_slices];
+
+                    let transfer_ix = Transfer {
+                        from: payerpc.to_account_info(),
+                        to: deposit_vault.to_account_info(),
+                        authority: market.to_account_info(), // Using the market PDA as the authority.
+                    };
+
+                    // Construct the context with the market PDA and bump seed.
+                    let cpi_ctx = CpiContext::new_with_signer(
+                        token_program.to_account_info(),
+                        transfer_ix,
+                        seeds,
+                    );
+                    // handle error if transfer fails by pentalty
+
+                    // Execute the transfer
+                    if let Err(err) = anchor_spl::token::transfer(cpi_ctx, deposit_amount) {
+                        // CPI errors cannot be handled in code, this arm will not be reached.
+                        msg!("Failed to transfer tokens: {:?}", err);
+                        msg!("handling penalty payments!");
+                        let penalty_amount = deposit_amount / 100;
+                        // Deduct the penalty from the bidder's deposit
+                        open_orders_auth.debit_locked_pc(penalty_amount);
+
+                        // Add the penalty amount to the asker's open order balance
+                        open_orders_cpty.credit_unlocked_pc(penalty_amount);
+
+                        msg!(
+                            "Penalty of {} PC Tokens transferred from bidder to asker",
+                            penalty_amount
+                        );
+                        // finalized = 2 means cancelled with penalty
+                        let fin: u8 = 2;
+                        let owner = parsed_event.owner;
+                        msg!("deposit amount {}", deposit_amount);
+                        open_orders_auth.credit_unlocked_pc(deposit_amount);
+                        let bidder_fill = Event::new(EventView::Finalise {
+                            side: Side::Ask,
+                            maker: true,
+                            native_qty_paid: parsed_event.native_qty_paid,
+                            native_qty_received: parsed_event.native_qty_released,
+                            order_id: parsed_event.order_id,
+                            owner: parsed_event.owner,
+                            owner_slot: parsed_event.owner_slot,
+                            finalised: fin,
+                            cpty: owner,
+                        });
+                        let mut event_slot = 1;
+                        if index == 0 {
+                            event_slot = event1_slot;
+                        }
+                        if index == 1 {
+                            event_slot = event2_slot;
+                        }
+                        let idx = event_slot;
+                        event_q.buf[idx as usize] = bidder_fill;
+                        eventBidFinalised = false;
+                    } else {
+                        msg!("Tokens transferred!");
+
+                        let fin: u8 = 1;
+                        let owner = parsed_event.owner;
+                        msg!("deposit amount {}", deposit_amount);
+                        open_orders_auth.credit_unlocked_pc(deposit_amount);
+                        let bidder_fill = Event::new(EventView::Finalise {
+                            side: Side::Ask,
+                            maker: true,
+                            native_qty_paid: parsed_event.native_qty_paid,
+                            native_qty_received: parsed_event.native_qty_released,
+                            order_id: parsed_event.order_id,
+                            owner: parsed_event.owner,
+                            owner_slot: parsed_event.owner_slot,
+                            finalised: fin,
+                            cpty: owner,
+                        });
+                        let mut event_updated = parsed_event.clone();
+                        event_updated.finalised = 1;
+                        let bidder_finalize = event_updated;
+                        let mut event_slot = 1;
+                        if index == 0 {
+                            event_slot = event1_slot;
+                        }
+                        if index == 1 {
+                            event_slot = event2_slot;
+                        }
+                        let idx = event_slot;
+                        event_q.buf[idx as usize] = bidder_finalize;
+                        eventBidFinalised = true;
                     }
-                    else {
-                        sider = 2;
+                    if cpty_deposit_amt > 0 {}
+                    let mut remaining_funds = 0;
+                    if remaining_funds > 0 {
+                        msg!("Newly locked PC for bidder {}", qty_pc);
                     }
-                    msg!("side is {}", sider);
-                
-                
-                    if sider == 1 {
-                        let mut qty_pc = parsed_event.native_qty_paid;
-                        let mut qty_coin = parsed_event.native_qty_released;
-                        let mut available_funds = open_orders_auth.native_pc_total;
-                        msg!("the available funds is {}", available_funds);
-                        msg!("the required funds are {}", qty_pc);
-            
-                        let mut deposit_amount = qty_pc / (market.pc_lot_size *10)  ;
-                        msg!("Deposit amt {}", deposit_amount);
-                        let mut cpty_deposit_amt = qty_coin;
-                        let mut deposit_vault = pc_vault;
-            
-                        if deposit_amount > 0 {
-                            // Derive the market's PDA and bump seed.
-                            let (market_pda, bump_seed) = Pubkey::find_program_address(
-                                &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
-                                &program_id
-                            );
+                    if index == 0 {
+                        open_orders_auth.native_pc_total = open_orders_auth
+                            .native_pc_total
+                            .checked_add(qty_pc)
+                            .unwrap();
+                    }
+                    if index == 1 {
+                        open_orders_cpty.native_pc_total = open_orders_cpty
+                            .native_pc_total
+                            .checked_add(deposit_amount)
+                            .unwrap();
+                    }
+                }
+            }
+            if sider == 2 {
+                let mut eventFin = parsed_event.finalised;
+                if eventFin == 1 {
+                    eventAskFinalised = true;
+                }
+                // eventFin = 0 means unfinalized, eventFin = 2 means cancelled with penalty
+                if eventFin == 0 || eventFin == 2 {
+                    eventAskFinalised == false;
+                }
+            }
+        }
+        //Settlement if both events are finalised
 
-                           
-                            let market_seed = b"market";
-                            
-                            let coin_mint_key = coin_mint.key();
-                            let pc_mint_key = pc_mint.key();
+        if eventBidFinalised == true && eventAskFinalised == true {
+            //checked subtract pc from event1 owner
+            open_orders_auth.native_pc_total = open_orders_auth
+                .native_pc_total
+                .checked_sub(event1.native_qty_paid)
+                .unwrap();
 
-                            let coin_mint_seed = coin_mint_key.as_ref();
-                            let pc_mint_seed = pc_mint_key.as_ref();
+            //subtract coin from event2 owner
+            //checked sub
+            open_orders_cpty.native_coin_total = open_orders_cpty
+                .native_coin_total
+                .checked_sub(event2.native_qty_paid)
+                .unwrap();
 
-                            let bump_seed_arr: &[u8] = &[bump_seed];
+            //add pc to event2 owner
+            let mut qty_pc = event2.native_qty_released;
+            let mut qty_coin = event1.native_qty_released;
 
-                            let seed_slices: [&[u8]; 4] = [market_seed, coin_mint_seed, pc_mint_seed, bump_seed_arr];
-                            let seeds: &[&[&[u8]]] = &[&seed_slices];
-                           
-                            let transfer_ix = Transfer {
-                                from: payerpc.to_account_info(),
-                                to: deposit_vault.to_account_info(),
-                                authority: market.to_account_info(),  // Using the market PDA as the authority.
+            ctx.accounts.open_orders_owner.native_pc_free = ctx
+                .accounts
+                .open_orders_counterparty
+                .native_pc_free
+                .checked_add(qty_pc)
+                .ok_or(ErrorCodeCustom::Error)?;
+
+            ctx.accounts.open_orders_counterparty.native_coin_total = ctx
+                .accounts
+                .open_orders_counterparty
+                .native_coin_free
+                .checked_add(qty_coin)
+                .ok_or(ErrorCodeCustom::Error)?;
+            //add coin to event1 owner
+
+            msg!("settlement completed!");
+            msg!("balance pc added to cpty {}", qty_pc);
+            msg!("balance coin added to auth {}", qty_coin);
+            msg!(
+                "oo cpty coin bal {}",
+                ctx.accounts.open_orders_counterparty.native_coin_total
+            );
+            msg!(
+                "oo cpty owner {}",
+                ctx.accounts.open_orders_counterparty.authority
+            );
+
+            msg!(
+                "oo owner pc bal {}",
+                ctx.accounts.open_orders_owner.native_pc_total
+            );
+            msg!(
+                "oo owner owner {}",
+                ctx.accounts.open_orders_owner.authority
+            );
+            msg!("oo owner market {}", ctx.accounts.open_orders_owner.market);
+        }
+
+        Ok(())
+    }
+
+    /// just in time transfers for ask side
+    pub fn finalise_matches_ask(
+        ctx: Context<NewMatchAsk>,
+        event1_slot: u8,
+        event2_slot: u8,
+    ) -> Result<()> {
+        let program_id = ctx.program_id;
+        let open_orders_auth = &mut ctx.accounts.open_orders_owner; //owner of event 1
+        let open_orders_cpty = &mut ctx.accounts.open_orders_counterparty; // owner of event 2
+        let market = &ctx.accounts.market;
+        let coin_vault = &ctx.accounts.coin_vault;
+        let req_q = &mut ctx.accounts.req_q;
+        let event_q = &mut ctx.accounts.event_q.load_mut()?;
+        let authority = &ctx.accounts.authority;
+        let token_program = &ctx.accounts.token_program;
+        let coin_mint = &ctx.accounts.coin_mint;
+        let pc_mint = &ctx.accounts.pc_mint;
+        let payercoin = &ctx.accounts.coinpayer;
+
+        let event1: Event = event_q.buf[usize::from(event1_slot)];
+        let event2: Event = event_q.buf[usize::from(event2_slot)];
+
+        let event1_orderid = event1.order_id;
+        let event2_orderid = event2.order_id;
+        let event1_orderidsecond = event1.order_id_second;
+        let event2_orderidsecond = event2.order_id_second;
+
+        msg!("event1 orderid is {}", event1_orderid);
+        msg!("event1 orderidsecond is {}", event1_orderidsecond);
+        msg!("event2 orderid is {}", event2_orderid);
+        msg!("event2 orderidsecond is {}", event2_orderidsecond);
+
+        require!(
+            event1.order_id_second == event2.order_id,
+            ErrorCodeCustom::BothEventsFinalised
+        );
+
+        let events: Vec<Event> = vec![event1, event2];
+        let mut order_id_general: u128 = 0;
+        let mut first_event_done: bool = false;
+        let mut eventBidFinalised: bool = false;
+        let mut eventAskFinalised: bool = false;
+
+        //validation
+        require!(
+            event1.finalised == 0 || event2.finalised == 0,
+            ErrorCodeCustom::BothEventsFinalised
+        );
+
+        for (index, parsed_event) in events.iter().enumerate() {
+            let sider;
+
+            let flags = BitFlags::<EventFlag>::from_bits(parsed_event.event_flags)
+                .unwrap_or(BitFlags::empty());
+
+            let side = EventFlag::flags_to_side(flags);
+            if side == Side::Bid {
+                sider = 1;
+            } else {
+                sider = 2;
+            }
+            msg!("side is {}", sider);
+
+            if sider == 2 {
+                let mut qty_coin = parsed_event.native_qty_paid;
+                let mut available_funds = open_orders_auth.native_coin_total;
+                msg!("the available funds is {}", available_funds);
+                msg!("the required funds are {}", qty_coin);
+
+                let mut deposit_amount = qty_coin; //decimals already multiplied
+                msg!("Deposit amt {}", deposit_amount);
+                let mut cpty_deposit_amt = qty_coin;
+                let mut deposit_vault = coin_vault;
+
+                if deposit_amount > 0 {
+                    // Derive the market's PDA and bump seed.
+                    let (market_pda, bump_seed) = Pubkey::find_program_address(
+                        &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
+                        &program_id,
+                    );
+
+                    let market_seed = b"market";
+
+                    let coin_mint_key = coin_mint.key();
+                    let pc_mint_key = pc_mint.key();
+
+                    let coin_mint_seed = coin_mint_key.as_ref();
+                    let pc_mint_seed = pc_mint_key.as_ref();
+
+                    let bump_seed_arr: &[u8] = &[bump_seed];
+
+                    let seed_slices: [&[u8]; 4] =
+                        [market_seed, coin_mint_seed, pc_mint_seed, bump_seed_arr];
+                    let seeds: &[&[&[u8]]] = &[&seed_slices];
+
+                    let transfer_ix = Transfer {
+                        from: payercoin.to_account_info(),
+                        to: deposit_vault.to_account_info(),
+                        authority: market.to_account_info(), // Using the market PDA as the authority.
+                    };
+
+                    // Construct the context with the market PDA and bump seed.
+                    let cpi_ctx = CpiContext::new_with_signer(
+                        token_program.to_account_info(),
+                        transfer_ix,
+                        seeds,
+                    );
+                    // Prepare for penalty if transfer fails:
+
+                    // If transfer fails, handle penalty
+                    msg!("attempting JIT transfers");
+                    match utils2::custom_token_transfer(cpi_ctx, deposit_amount) {
+                        Err(err) => {
+                            // Error on CPI cannot be handled. Below arm never reached.
+                            msg!("Failed to transfer tokens: {:?}", err);
+                            msg!("Call cancel_with_penalty to cancel");
+                            // Additional error handling logic
+                        }
+                        //If transfer succeeds, record deal status in eventQ
+                        Ok(_) => {
+                            // Successful transfer
+                            msg!("Tokens transferred!");
+                            // finalized = 1 means succesfully transferred and settleable.
+                            let fin: u8 = 1;
+                            let owner = parsed_event.owner;
+                            let asker_fill = Event::new(EventView::Finalise {
+                                side: Side::Ask,
+                                maker: true,
+                                native_qty_paid: parsed_event.native_qty_paid,
+                                native_qty_received: parsed_event.native_qty_released,
+                                order_id: parsed_event.order_id,
+                                owner: parsed_event.owner,
+                                owner_slot: parsed_event.owner_slot,
+                                finalised: fin,
+                                cpty: owner,
+                            });
+                            let mut event_updated = parsed_event.clone();
+                            event_updated.finalised = 1;
+                            let asker_finalize = event_updated;
+                            let mut event_slot = 0;
+                            if index == 0 {
+                                event_slot = event1_slot;
+                            }
+                            if index == 1 {
+                                event_slot = event2_slot;
+                            }
+                            let idx = event_slot;
+                            event_q.buf[idx as usize] = asker_finalize;
+
+                            //accounting
+                            if index == 0 {
+                                open_orders_auth.native_coin_total = open_orders_auth
+                                    .native_coin_total
+                                    .checked_add(deposit_amount)
+                                    .unwrap();
+                            }
+                            if index == 1 {
+                                open_orders_cpty.native_coin_total = open_orders_cpty
+                                    .native_coin_total
+                                    .checked_add(deposit_amount)
+                                    .unwrap();
                             };
-                        
-                            // Construct the context with the market PDA and bump seed.
-                            let cpi_ctx = CpiContext::new_with_signer(
-                                token_program.to_account_info(),
-                                transfer_ix,
-                                seeds,
-                            );
-                            // handle error if transfer fails by pentalty
-                           
-                            // Execute the transfer
-                            if let Err(err) = anchor_spl::token::transfer(cpi_ctx, deposit_amount) {
-                                // CPI errors cannot be handled in code, this arm will not be reached.
-                                msg!("Failed to transfer tokens: {:?}", err);
-                                msg!("handling penalty payments!");
-                                let penalty_amount = deposit_amount / 100;
-                                // Deduct the penalty from the bidder's deposit
-                                open_orders_auth.debit_locked_pc(penalty_amount);
-                        
-                                // Add the penalty amount to the asker's open order balance
-                                open_orders_cpty.credit_unlocked_pc(penalty_amount);
-                        
-                                msg!("Penalty of {} PC Tokens transferred from bidder to asker", penalty_amount);
-                                // finalized = 2 means cancelled with penalty
-                                let fin: u8 = 2;
-                                    let owner = parsed_event.owner;
-                                    msg!("deposit amount {}", deposit_amount);
-                                    open_orders_auth.credit_unlocked_pc(deposit_amount);
-                                    let bidder_fill = Event::new(EventView::Finalise {
-                                    side: Side::Ask,
-                                    maker: true,
-                                    native_qty_paid:  parsed_event.native_qty_paid,
-                                    native_qty_received: parsed_event.native_qty_released,
-                                    order_id: parsed_event.order_id,
-                                    owner: parsed_event.owner,
-                                    owner_slot: parsed_event.owner_slot,
-                                    finalised: fin,
-                                    cpty: owner,
-                                });
-                                let mut event_slot = 1;
-                                if index == 0 {
-                                    event_slot = event1_slot;
-                                }
-                                if index == 1 {
-                                    event_slot = event2_slot;
-                                }
-                                let idx = event_slot;
-                                event_q.buf[idx as usize] = bidder_fill;
-                                eventBidFinalised = false;
-
-                            }
-                            else {
-                                msg!("Tokens transferred!");
-                             
-
-                                    let fin: u8 = 1;
-                                    let owner = parsed_event.owner;
-                                    msg!("deposit amount {}", deposit_amount);
-                                    open_orders_auth.credit_unlocked_pc(deposit_amount);
-                                    let bidder_fill = Event::new(EventView::Finalise {
-                                    side: Side::Ask,
-                                    maker: true,
-                                    native_qty_paid:  parsed_event.native_qty_paid,
-                                    native_qty_received: parsed_event.native_qty_released,
-                                    order_id: parsed_event.order_id,
-                                    owner: parsed_event.owner,
-                                    owner_slot: parsed_event.owner_slot,
-                                    finalised: fin,
-                                    cpty: owner,
-                                });
-                                let mut event_updated = parsed_event.clone();
-                                event_updated.finalised = 1;
-                                let bidder_finalize = event_updated;
-                                let mut event_slot = 1;
-                                if index == 0 {
-                                    event_slot = event1_slot;
-                                }
-                                if index == 1 {
-                                    event_slot = event2_slot;
-                                }
-                                let idx = event_slot;
-                                event_q.buf[idx as usize] = bidder_finalize;
-                                eventBidFinalised = true;
-                                }
-                                if cpty_deposit_amt > 0 {
-                                }
-                                let mut remaining_funds = 0;
-                                if remaining_funds > 0 {
-                                
-                                    msg!("Newly locked PC for bidder {}", qty_pc);
-                                }
-                                if index == 0 {
-                                    open_orders_auth.native_pc_total  = open_orders_auth
-                                        .native_pc_total
-                                        .checked_add(qty_pc)
-                                        .unwrap();
-                                    }
-                                if index == 1 {
-                                    open_orders_cpty.native_pc_total  = open_orders_cpty
-                                        .native_pc_total
-                                        .checked_add(deposit_amount)
-                                        .unwrap();
-                                    }
-                            }
-                    }
-                    if sider == 2 {
-                        let mut eventFin = parsed_event.finalised;
-                        if eventFin == 1{
+                            let mut remaining_funds = 1;
                             eventAskFinalised = true;
                         }
-                        // eventFin = 0 means unfinalized, eventFin = 2 means cancelled with penalty
-                        if eventFin == 0 || eventFin == 2 {
-                            eventAskFinalised == false;
-                        }
-                        
-                    } 
+                    }
                 }
-                //Settlement if both events are finalised
-                
-                if eventBidFinalised == true && eventAskFinalised == true {
-                    //checked subtract pc from event1 owner                    
-                    open_orders_auth.native_pc_total = open_orders_auth
-                                .native_pc_total
-                                .checked_sub(event1.native_qty_paid)
-                                .unwrap();
-                            
-                    //subtract coin from event2 owner
-                    //checked sub
-                    open_orders_cpty.native_coin_total = open_orders_cpty
-                                .native_coin_total
-                                .checked_sub(event2.native_qty_paid)
-                                .unwrap(); 
-                            
-                    //add pc to event2 owner
-                    let mut qty_pc = event2.native_qty_released;
-                    let mut qty_coin = event1.native_qty_released;
-
-                    ctx.accounts.open_orders_owner.native_pc_free = ctx.accounts
-                        .open_orders_counterparty
-                        .native_pc_free
-                        .checked_add(qty_pc)
-                        .ok_or(ErrorCodeCustom::Error)?;
-                    
-
-                    ctx.accounts.open_orders_counterparty.native_coin_total = ctx.accounts
-                        .open_orders_counterparty
-                        .native_coin_free
-                        .checked_add(qty_coin)
-                        .ok_or(ErrorCodeCustom::Error)?;
-                    //add coin to event1 owner  
-
-                    msg!("settlement completed!");
-                    msg!("balance pc added to cpty {}", qty_pc);
-                    msg!("balance coin added to auth {}", qty_coin);
-                    msg!("oo cpty coin bal {}", ctx.accounts.open_orders_counterparty.native_coin_total);
-                    msg!("oo cpty owner {}", ctx.accounts.open_orders_counterparty.authority);
-
-
-                    msg!("oo owner pc bal {}", ctx.accounts.open_orders_owner.native_pc_total);
-                    msg!("oo owner owner {}", ctx.accounts.open_orders_owner.authority);
-                    msg!("oo owner market {}", ctx.accounts.open_orders_owner.market);
-
-
-
-
-                }
-            
-                Ok(())
-            }
-
-
-            
-        
-            
-            
-            
-            
-
-            /// just in time transfers for ask side
-pub fn finalise_matches_ask(
-                ctx: Context<NewMatchAsk>,
-                event1_slot: u8,
-                event2_slot: u8,
-            ) -> Result<()> {
-                let program_id = ctx.program_id;
-                let open_orders_auth = &mut ctx.accounts.open_orders_owner; //owner of event 1
-                let open_orders_cpty = &mut ctx.accounts.open_orders_counterparty; // owner of event 2
-                let market = &ctx.accounts.market;
-                let coin_vault = &ctx.accounts.coin_vault;
-                let req_q = &mut ctx.accounts.req_q;
-                let event_q = &mut ctx.accounts.event_q.load_mut()?;
-                let authority = &ctx.accounts.authority;
-                let token_program = &ctx.accounts.token_program;
-                let coin_mint = &ctx.accounts.coin_mint;
-                let pc_mint = &ctx.accounts.pc_mint;
-                let payercoin = &ctx.accounts.coinpayer;
-            
-                let event1: Event = event_q.buf[usize::from(event1_slot)];
-                let event2: Event = event_q.buf[usize::from(event2_slot)];
-            
-                let event1_orderid = event1.order_id;
-                let event2_orderid = event2.order_id;
-                let event1_orderidsecond = event1.order_id_second;
-                let event2_orderidsecond = event2.order_id_second;
-            
-                msg!("event1 orderid is {}", event1_orderid);
-                msg!("event1 orderidsecond is {}", event1_orderidsecond);
-                msg!("event2 orderid is {}", event2_orderid);
-                msg!("event2 orderidsecond is {}", event2_orderidsecond);
-            
-                require!(event1.order_id_second == event2.order_id, ErrorCodeCustom::BothEventsFinalised);
-            
-                let events: Vec<Event> = vec![event1, event2];
-                let mut order_id_general: u128 = 0;
-                let mut first_event_done: bool = false;
-                let mut eventBidFinalised: bool = false;
-                let mut eventAskFinalised: bool = false;
-
-                //validation
-                require!(event1.finalised== 0 || event2.finalised == 0, ErrorCodeCustom::BothEventsFinalised);
-
-                for (index, parsed_event) in events.iter().enumerate() {
-                    let sider;
-                   
-                    let flags = BitFlags::<EventFlag>::from_bits(parsed_event.event_flags).unwrap_or(BitFlags::empty());
-
-                    let side = EventFlag::flags_to_side(flags);
-                    if side == Side::Bid {
-                        sider = 1;
+                if sider == 1 {
+                    // check if event is finalised
+                    let mut eventFin = parsed_event.finalised;
+                    if eventFin == 1 {
+                        eventBidFinalised = true;
+                    } else {
+                        eventBidFinalised == false;
                     }
-                    else {
-                        sider = 2;
-                    }
-                    msg!("side is {}", sider);
-                    
-                       if sider == 2  {
-                            let mut qty_coin = parsed_event.native_qty_paid;
-                            let mut available_funds = open_orders_auth.native_coin_total;
-                            msg!("the available funds is {}", available_funds);
-                            msg!("the required funds are {}", qty_coin);
-                
-                            let mut deposit_amount = qty_coin; //decimals already multiplied
-                            msg!("Deposit amt {}", deposit_amount);
-                            let mut cpty_deposit_amt = qty_coin;
-                            let mut deposit_vault = coin_vault;
-                
-                            if deposit_amount > 0 {
-                                // Derive the market's PDA and bump seed.
-                                let (market_pda, bump_seed) = Pubkey::find_program_address(
-                                    &[b"market", coin_mint.key().as_ref(), pc_mint.key().as_ref()],
-                                    &program_id
-                                );
-
-                            
-                                let market_seed = b"market";
-                                
-                                let coin_mint_key = coin_mint.key();
-                                let pc_mint_key = pc_mint.key();
-
-                                let coin_mint_seed = coin_mint_key.as_ref();
-                                let pc_mint_seed = pc_mint_key.as_ref();
-
-                                let bump_seed_arr: &[u8] = &[bump_seed];
-
-                                let seed_slices: [&[u8]; 4] = [market_seed, coin_mint_seed, pc_mint_seed, bump_seed_arr];
-                                let seeds: &[&[&[u8]]] = &[&seed_slices];
-                                
-                                let transfer_ix = Transfer {
-                                    from: payercoin.to_account_info(),
-                                    to: deposit_vault.to_account_info(),
-                                    authority: market.to_account_info(),  // Using the market PDA as the authority.
-                                };
-                            
-                                // Construct the context with the market PDA and bump seed.
-                                let cpi_ctx = CpiContext::new_with_signer(
-                                    token_program.to_account_info(),
-                                    transfer_ix,
-                                    seeds,
-                                );
-                                // Prepare for penalty if transfer fails:
-
-                                // If transfer fails, handle penalty
-                                msg!("attempting JIT transfers");
-                                match utils2::custom_token_transfer(cpi_ctx, deposit_amount)
-                                {
-                                        
-                                Err(err) => {
-                                    // Error on CPI cannot be handled. Below arm never reached.
-                                    msg!("Failed to transfer tokens: {:?}", err);
-                                    msg!("Call cancel_with_penalty to cancel");
-                                            // Additional error handling logic
-                                    }
-                                    //If transfer succeeds, record deal status in eventQ
-                                    Ok(_) => {
-                                        // Successful transfer
-                                        msg!("Tokens transferred!");
-                                        // finalized = 1 means succesfully transferred and settleable.
-                                        let fin: u8 = 1;
-                                        let owner = parsed_event.owner;
-                                        let asker_fill = Event::new(EventView::Finalise {
-                                            side: Side::Ask,
-                                            maker: true,
-                                            native_qty_paid:  parsed_event.native_qty_paid,
-                                            native_qty_received: parsed_event.native_qty_released,
-                                            order_id: parsed_event.order_id,
-                                            owner: parsed_event.owner,
-                                            owner_slot: parsed_event.owner_slot,
-                                            finalised: fin,
-                                            cpty: owner,
-                                        });
-                                        let mut event_updated = parsed_event.clone();
-                                        event_updated.finalised = 1;
-                                        let asker_finalize = event_updated;
-                                        let mut event_slot = 0;
-                                        if index == 0 {
-                                        event_slot = event1_slot;
-                                        }
-                                        if index == 1 {
-                                        event_slot = event2_slot;
-                                        }
-                                        let idx = event_slot;
-                                        event_q.buf[idx as usize] = asker_finalize;
-                                    
-                                    //accounting
-                                    if index == 0 {
-                                    open_orders_auth.native_coin_total = open_orders_auth
-                                        .native_coin_total
-                                        .checked_add(deposit_amount)
-                                        .unwrap();
-                                    }
-                                    if index == 1 {
-                                        open_orders_cpty.native_coin_total = open_orders_cpty
-                                            .native_coin_total
-                                            .checked_add(deposit_amount)
-                                            .unwrap();
-                                    };
-                                    let mut remaining_funds = 1;
-                                    eventAskFinalised = true;
-                                }
-                            }
-
-
-                        
-                        
-                        
-                    }
-                        if sider == 1 {
-                            // check if event is finalised
-                            let mut eventFin = parsed_event.finalised;
-                            if eventFin == 1{
-                                eventBidFinalised = true;
-                            }
-                            else {
-                                eventBidFinalised == false;
-                            }
-
-                      
-                    }
-               
                 }
             }
-            //Settle funds
-            if eventBidFinalised == true && eventAskFinalised == true {
-                //checked subtract pc from event1 owner
-                open_orders_auth.native_pc_total = open_orders_auth
-                                .native_pc_total
-                                .checked_sub(event1.native_qty_paid)
-                                .unwrap();
-                            
-                //subtract coin from event2 owner
-                open_orders_cpty.native_coin_total = open_orders_cpty
-                                .native_coin_total
-                                .checked_sub(event2.native_qty_paid)
-                                .unwrap();
-                //add pc to event2 owner
-                open_orders_cpty.native_pc_free += event2.native_qty_released;
-                //add coin to event1 owner
-                open_orders_auth.native_coin_free += event1.native_qty_released;
-            
-            }
-                Ok(())
-            
         }
+        //Settle funds
+        if eventBidFinalised == true && eventAskFinalised == true {
+            //checked subtract pc from event1 owner
+            open_orders_auth.native_pc_total = open_orders_auth
+                .native_pc_total
+                .checked_sub(event1.native_qty_paid)
+                .unwrap();
+
+            //subtract coin from event2 owner
+            open_orders_cpty.native_coin_total = open_orders_cpty
+                .native_coin_total
+                .checked_sub(event2.native_qty_paid)
+                .unwrap();
+            //add pc to event2 owner
+            open_orders_cpty.native_pc_free += event2.native_qty_released;
+            //add coin to event1 owner
+            open_orders_auth.native_coin_free += event1.native_qty_released;
+        }
+        Ok(())
     }
-            
-         
-        
+}
